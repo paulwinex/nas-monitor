@@ -1,44 +1,43 @@
 <template>
-  <q-card class="system-metrics-widget bg-dark-page text-white shadow-2" bordered>
-    <div class="row items-center q-px-md q-py-xs border-bottom-dark bg-header">
-      <div class="col-6">
-        <span class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1">System Metrics</span>
-      </div>
-      <div class="col-6 flex justify-end items-center text-mono text-grey-5" style="font-size: 11px;">
+  <MetricsPanel :cols="2" min-col-width="200px">
+    <template #title>
+      <span class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1">System</span>
+    </template>
+
+    <template #header-right>
+      <div class="text-mono text-grey-5" style="font-size: 11px;">
         UPTIME: <span class="text-white q-ml-xs">{{ formattedUptime }}</span>
       </div>
-    </div>
+      <q-btn icon="info" size="sm" class="q-ml-md" dense color="grey" flat />
+    </template>
 
-    <div class="q-pa-sm">
-      <div class="metrics-grid">
-        <MetricBaseWidget
-          label="CPU LOAD" :value="sysState.cpu.load + '%'"
-          :temp="sysState.cpu.temp" :progress="sysState.cpu.load/100"
-          :history="sysState.cpu.history" color="#2E93FA"
-          @click="handleWidgetClick"
-        />
 
-        <MetricBaseWidget
-          label="RAM USED" :value="sysState.ram.used + ' GB'"
-          :temp="sysState.ram.temp" :progress="sysState.ram.used/sysState.ram.total"
-          :history="sysState.ram.history" color="#00E396"
-          @click="handleWidgetClick"
-        />
+    <MetricBaseWidget
+      label="CPU" :value="sysState.cpu.load + '%'"
+      :temp="sysState.cpu.temp" :progress="sysState.cpu.load/100"
+      :history="sysState.cpu.history" color="#2E93FA"
+      @click="handleWidgetClick"
+    />
 
-        <NetworkWidget
-          :upSpeed="sysState.net.up + ' MB/s'" :downSpeed="sysState.net.down + ' MB/s'"
-          :upHistory="sysState.net.upHistory" :downHistory="sysState.net.downHistory"
-          @click="handleWidgetClick"
-        />
+    <MetricBaseWidget
+      label="RAM" :value="sysState.ram.used + ' GB'"
+      :temp="sysState.ram.temp" :progress="sysState.ram.used/sysState.ram.total"
+      :history="sysState.ram.history" color="#00E396"
+      @click="handleWidgetClick"
+    />
 
-        <DiskUsageWidget
-          :path="sysState.osDisk.path" :temp="sysState.osDisk.temp"
-          :used="sysState.osDisk.used" :total="sysState.osDisk.total"
-          @click="handleWidgetClick"
-        />
-      </div>
-    </div>
-  </q-card>
+    <NetworkWidget
+      :upSpeed="sysState.net.up + ' MB/s'" :downSpeed="sysState.net.down + ' MB/s'"
+      :upHistory="sysState.net.upHistory" :downHistory="sysState.net.downHistory"
+      @click="handleWidgetClick"
+    />
+
+    <DiskUsageWidget
+      :path="sysState.osDisk.path" :temp="sysState.osDisk.temp"
+      :used="sysState.osDisk.used" :total="sysState.osDisk.total"
+      @click="handleWidgetClick"
+    />
+  </MetricsPanel>
 </template>
 
 <script setup>
@@ -46,12 +45,13 @@ import { reactive, onMounted, onUnmounted, computed, ref } from 'vue';
 import MetricBaseWidget from './MetricBaseWidget.vue';
 import NetworkWidget from './NetworkWidget.vue';
 import DiskUsageWidget from './DiskUsageWidget.vue';
+import MetricsPanel from "./MetricsPanel.vue";
 
 const sysState = reactive({
   cpu: { load: 0, temp: 0, history: Array(40).fill(0) },
   ram: { used: 0, total: 32, temp: 0, history: Array(40).fill(0) },
   net: { up: 0, down: 0, upHistory: Array(40).fill(0), downHistory: Array(40).fill(0) },
-  osDisk: { path: 'rootfs', used: 120, total: 500, temp: 31 }
+  osDisk: { path: '/dev/nvme', used: 120, total: 500, temp: 31 }
 });
 
 const handleWidgetClick = (id) => {

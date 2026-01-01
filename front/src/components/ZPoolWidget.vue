@@ -1,40 +1,37 @@
 <template>
-  <q-card class="zfs-pool-widget bg-dark-page text-white shadow-2" bordered>
-    <div class="row items-center q-px-md q-py-xs border-bottom-dark bg-header">
-      <div class="col-6">
-        <span class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1">{{ poolState.name }}</span>
-        <q-badge color="positive" class="q-ml-sm text-weight-bold" label="ONLINE" size="10px" />
-      </div>
-      <div class="col-6 flex justify-end items-center">
-        <span class="text-grey-5 q-mr-sm" style="font-size: 11px;">{{ poolState.usedSize }} / {{ poolState.totalSize }}</span>
-        <div style="width: 50px"><q-linear-progress :value="0.6" color="blue-6" track-color="grey-9" /></div>
-      </div>
-    </div>
+  <MetricsPanel :cols="3" min-col-width="150px">
+    <template #title>
+      <span class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1">{{ poolState.name }}</span>
+      <q-badge color="green-9" class="q-ml-sm text-weight-bold" label="ONLINE" size="10px" />
+    </template>
 
-    <div class="q-pa-sm">
-      <div class="disk-grid">
-        <ZfsDiskWidget
-          v-for="(disk, index) in poolState.disks"
-          :key="disk.sn"
-          :disk="disk"
-          :accent-color="CHART_COLORS[index % CHART_COLORS.length]"
-          @click="onDiskHandle"
-        />
-      </div>
-    </div>
-  </q-card>
+    <template #header-right>
+      <span class="text-grey-5 q-mr-sm" style="font-size: 11px;">{{ poolState.usedSize }} / {{ poolState.totalSize }}</span>
+      <div style="width: 50px"><q-linear-progress :value="0.6" color="blue-6" track-color="grey-6" /></div>
+      <q-btn icon="info" size="sm" class="q-ml-md" dense color="grey" flat />
+    </template>
+
+    <ZfsDiskWidget
+      v-for="(disk, index) in poolState.disks"
+      :key="disk.sn"
+      :disk="disk"
+      :accent-color="CHART_COLORS[index % CHART_COLORS.length]"
+      @click="onDiskHandle"
+    />
+  </MetricsPanel>
 </template>
 
 <script setup>
 import { reactive, onMounted, onUnmounted } from 'vue';
-import ZfsDiskWidget from './ZfsDiskWidget.vue'; // Импорт нового компонента
+import ZfsDiskWidget from './ZfsDiskWidget.vue';
+import MetricsPanel from "components/MetricsPanel.vue";
 
 const CHART_COLORS = ['#2E93FA', '#00E396', '#FEB019', '#FF4560', '#775DD0', '#546E7A'];
 
 const poolState = reactive({
-  name: 'STORAGE_POOL_A',
-  usedSize: '31.2 TB',
-  totalSize: '48.0 TB',
+  name: 'STORE',
+  usedSize: '4.2 TB',
+  totalSize: '26.0 TB',
   disks: [
     { path: '/dev/sda', model: 'HGST Ultrastar', sn: 'K7G8L9P0', temp: 32, smart: 'OK', history: Array(21).fill(32) },
     { path: '/dev/sdb', model: 'HGST Ultrastar', sn: 'K7G8L9P1', temp: 33, smart: 'OK', history: Array(21).fill(33) },

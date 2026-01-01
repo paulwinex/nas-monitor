@@ -15,7 +15,6 @@
 </template>
 
 <script setup>
-//
 import ZPoolWidget from "components/ZPoolWidget.vue";
 import SystemMetricsWidget from "components/SystemMetricsWidget.vue";
 </script>
