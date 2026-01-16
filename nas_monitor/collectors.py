@@ -8,6 +8,7 @@ from datetime import datetime
 import psutil
 
 from nas_monitor.shemas import Metrics
+from nas_monitor.utils.disk_utils import collect_all_disk_info
 
 zfs_is_available = bool(shutil.which('zfs'))
 smartctl_is_available = bool(shutil.which('smartctl'))
@@ -66,10 +67,31 @@ class RAMCollector(BaseCollector):
 
     async def collect(self) -> list[Metrics]:
         mem = psutil.virtual_memory()
-        return [
+        metrics = [
             Metrics(device_name="ram", label="usage_percent", value=mem.percent),
             Metrics(device_name="ram", label="used_gb", value=round(mem.used / (1024 ** 3), 2))
         ]
+
+        # RAM temperature (try to find matching sensors)
+        try:
+            temps = psutil.sensors_temperatures()
+            mem_temps = []
+            for name, entries in temps.items():
+                name_lower = name.lower()
+                # jc42 is a common RAM temp sensor driver
+                if any(x in name_lower for x in ['dimm', 'mem', 'acpitz', 'pch_', 'jc42', 'gigabyte']):
+                    for entry in entries:
+                        if entry.current > 0:
+                            mem_temps.append(entry.current)
+            
+            if mem_temps:
+                # Use max or average? Usually people care about the hottest stick
+                avg_temp = sum(mem_temps) / len(mem_temps)
+                metrics.append(Metrics(device_name="ram", label="temp", value=round(avg_temp, 1)))
+        except Exception:
+            pass
+
+        return metrics
 
 
 class NetCollector(BaseCollector):
@@ -100,96 +122,27 @@ class StorageCollector(BaseCollector):
     dev_type = 'storage'
 
     async def collect(self) -> list[Metrics]:
-        if not smartctl_is_available:
-            return []
+        data = await collect_all_disk_info()
         metrics = []
         
-        # Get mount points to match disks with partitions
-        # Resolve all devices to their real paths to handle LVM/dm-crypt/etc.
-        partitions = {}
-        for p in psutil.disk_partitions(all=True):
-            try:
-                # Resolve symlinks like /dev/mapper/rpool-ROOT... or /dev/nvme0n1p3
-                real_dev = os.path.realpath(p.device)
-                partitions[real_dev] = p.mountpoint
-                partitions[p.device] = p.mountpoint
-            except Exception:
-                continue
-        
-        # get device list
-        proc = await asyncio.create_subprocess_exec(
-            "smartctl", "--scan", "--json",
-            stdout=asyncio.subprocess.PIPE
-        )
-        stdout, _ = await proc.communicate()
-        devices = json.loads(stdout).get("devices", [])
-        for dev in devices:
-            path = dev['name']
-            real_path = os.path.realpath(path)
-            p = await asyncio.create_subprocess_exec(
-                "smartctl", "-a", path, "--json",
-                stdout=asyncio.subprocess.PIPE
-            )
-            out, _ = await p.communicate()
-            data = json.loads(out)
-            sn = data.get("serial_number", path).strip()
-            # temperature
-            temp = data.get("temperature", {}).get("current", 0)
-            metrics.append(Metrics(device_name=sn, label="temp", value=float(temp)))
+        for disk in data.get('disks', []):
+            sn = disk.get('serial') or disk.get('name')
             
-            # Disk Usage for standalone disks
-            mount_point = None
-            # Check dev, real dev, and potential partitions
-            search_paths = [path, real_path]
-            for sp in search_paths:
-                if sp in partitions:
-                    mount_point = partitions[sp]
-                    break
+            # SMART data
+            smart = disk.get('smart', {})
+            if smart:
+                metrics.append(Metrics(device_name=sn, label="temp", value=float(smart.get('temperature', 0))))
+                metrics.append(Metrics(device_name=sn, label="health", value=float(smart.get('health_status', 0))))
             
-            if not mount_point:
-                # Check partitions like /dev/sda1 or /dev/nvme0n1p1
-                for part_dev, mnt in partitions.items():
-                    if part_dev.startswith(path) or part_dev.startswith(real_path):
-                        mount_point = mnt
-                        break
-            
-            if mount_point:
-                try:
-                    usage = psutil.disk_usage(mount_point)
-                    metrics.extend([
-                        Metrics(device_name=sn, label="used_gb", value=round(usage.used / (1024**3), 2)),
-                        Metrics(device_name=sn, label="total_gb", value=round(usage.total / (1024**3), 2)),
-                        Metrics(device_name=sn, label="usage_percent", value=usage.percent)
-                    ])
-                except Exception:
-                    pass
-
-
-            is_passed = data.get("smart_status", {}).get("passed", True)
-            # collect errors (SATA/NVMe)
-            reallocated = 0
-            pending = 0
-            # for SATA
-            for attr in data.get("ata_smart_attributes", {}).get("table", []):
-                name = attr.get("name")
-                raw_val = attr.get("raw", {}).get("value", 0)
-                if name == "Reallocated_Sector_Ct":
-                    reallocated = raw_val
-                elif name == "Current_Pending_Sector":
-                    pending = raw_val
-            # for NVMe
-            nvme_err = data.get("nvme_smart_health_information_log", {}).get("media_errors", 0)
-            total_errors = reallocated + pending + nvme_err
-            # compute status
-            if not is_passed:
-                health_status = 3  # Critical: hard drive is broken :(
-            elif total_errors > 50:
-                health_status = 2  # Critical: to many bad sectors!!!
-            elif total_errors > 5:
-                health_status = 1  # Warning: first errors found!
-            else:
-                health_status = 0  # OK: no errors
-            metrics.append(Metrics(device_name=sn, label='health', value=health_status))
+            # Disk Usage (if mounted in system)
+            usage = disk.get('usage')
+            if usage:
+                metrics.extend([
+                    Metrics(device_name=sn, label="used_gb", value=usage['used_gb']),
+                    Metrics(device_name=sn, label="total_gb", value=usage['total_gb']),
+                    Metrics(device_name=sn, label="usage_percent", value=usage['percent'])
+                ])
+                
         return metrics
 
 
@@ -198,61 +151,19 @@ class ZFSCollector(BaseCollector):
     dev_type = "zfs_pool"
 
     async def collect(self) -> list[Metrics]:
-        if not zfs_is_available:
-            return []
+        data = await collect_all_disk_info()
         metrics = []
-        # Use 'zfs list' to get usage percent based on USABLE space
-        cmd = ["zfs", "list", "-H", "-p", "-o", "name,used,avail"]
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE)
-        stdout, _ = await proc.communicate()
-        for line in stdout.decode().strip().split('\n'):
-            if not line or '/' in line: continue
-            try:
-                parts = line.split()
-                if len(parts) < 3: continue
-                name, used, avail = parts
-                used_bytes = int(used)
-                avail_bytes = int(avail)
-                total_bytes = used_bytes + avail_bytes
-                
-                usage_percent = (used_bytes / total_bytes * 100) if total_bytes > 0 else 0
-                
-                metrics.append(Metrics(device_name=name, label="usage_percent", value=round(usage_percent, 2)))
-                metrics.append(Metrics(device_name=name, label="used_gb", value=round(used_bytes / (1024**3), 2)))
-                metrics.append(Metrics(device_name=name, label="total_gb", value=round(total_bytes / (1024**3), 2)))
-            except (ValueError, IndexError):
-                continue
-        return metrics
-
-class RAMCollector(BaseCollector):
-    dev_type = "ram"
-
-    async def collect(self) -> list[Metrics]:
-        mem = psutil.virtual_memory()
-        metrics = [
-            Metrics(device_name="ram", label="usage_percent", value=mem.percent),
-            Metrics(device_name="ram", label="used_gb", value=round(mem.used / (1024**3), 2))
-        ]
         
-        # RAM temperature (try to find matching sensors)
-        try:
-            temps = psutil.sensors_temperatures()
-            mem_temp = None
-            for name, entries in temps.items():
-                name_lower = name.lower()
-                if any(x in name_lower for x in ['dimm', 'mem', 'acpitz', 'pch_']):
-                    for entry in entries:
-                        if entry.current > 0:
-                            mem_temp = entry.current
-                            break
-                if mem_temp: break
+        for pool in data.get('zfs_pools', []):
+            name = pool['name']
+            usage = pool.get('real_usage', {})
+            if usage:
+                metrics.append(Metrics(device_name=name, label="usage_percent", value=usage['percent']))
+                metrics.append(Metrics(device_name=name, label="used_gb", value=usage['used_gb']))
+                metrics.append(Metrics(device_name=name, label="total_gb", value=usage['total_gb']))
                 
-            if mem_temp is not None:
-                metrics.append(Metrics(device_name="ram", label="temp", value=round(mem_temp, 1)))
-        except Exception:
-            pass
-            
         return metrics
+
 
 
 

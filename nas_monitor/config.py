@@ -23,7 +23,7 @@ class AppConfig(BaseSettings):
     COLLECTOR_INTERVAL_RAM: int = 5
     COLLECTOR_INTERVAL_NETWORK: int = 3
     COLLECTOR_INTERVAL_STORAGE: int = 60
-    COLLECTOR_INTERVAL_ZFS_POOL: int = 600  # 10 minutes
+    COLLECTOR_INTERVAL_ZFS_POOL: int = 60  # 1 minute
     
     # Metrics retention
     RAW_RETENTION_HOURS: int = 3
