@@ -1,8 +1,9 @@
 <template>
   <MetricsPanel :cols="3" min-col-width="150px">
     <template #title>
+      <span class="text-mono text-grey-5" style="font-size: 11px;">ZPool</span>
       <span 
-        class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1 cursor-pointer" 
+        class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1 cursor-pointer q-pl-sm" 
         @click="deviceStore.selectedDevice = pool"
       >{{ pool.name }}</span>
       <q-badge color="green-9" class="q-ml-sm text-weight-bold" label="ONLINE" size="10px" />

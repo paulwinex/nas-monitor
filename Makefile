@@ -13,7 +13,7 @@ help:
 	@echo "  make setup-remote   - Setup systemd service on remote host"
 	@echo "  make setup-local    - Setup systemd service on current host"
 	@echo "  make remove-remote  - Remove service from remote host"
-	@echo "  make remove-local   - Remove service from current host"
+	@echo "  make logs-remote    - Follow service logs on remote host"
 	@echo ""
 	@echo "Running:"
 	@echo "  make run            - Run in foreground mode (default)"
@@ -95,6 +95,10 @@ status:
 
 logs:
 	@./run.sh logs
+
+logs-remote:
+	@echo "Following logs on $(REMOTE_HOST)..."
+	@ssh "$(REMOTE_HOST)" "journalctl -u nas-monitor -f"
 
 # Frontend
 dev-front:

@@ -13,7 +13,13 @@ case "$MODE" in
     foreground|fg)
         echo "Starting NAS Monitor in foreground mode..."
         export PYTHONPATH=${PWD}
-        exec uv run nas_monitor
+        UV_BIN=$(command -v uv || which uv)
+        if [ -z "$UV_BIN" ]; then
+            for p in "/root/.local/bin/uv" "/usr/local/bin/uv" "/usr/bin/uv"; do
+                if [ -x "$p" ]; then UV_BIN="$p"; break; fi
+            done
+        fi
+        exec "${UV_BIN:-uv}" run nas_monitor
         ;;
     
     service)
