@@ -1,4 +1,6 @@
 import logging
+import psutil
+import time
 from datetime import datetime, timedelta, timezone
 
 from tortoise import Tortoise, transactions
@@ -215,23 +217,13 @@ async def get_inventory_grouped() -> dict:
     Get devices grouped by ZFS pools and standalone devices.
     Returns:
     {
-        "zpools": [
-            {
-                "name": "pool_name",
-                "type": "zfs_pool",
-                "details": {...},
-                "disks": [...]  # Only pools with >1 disk
-            }
-        ],
-        "system_devices": {
-            "cpu": {...},
-            "ram": {...},
-            "network": {...},
-            "storage": [...]  # Standalone disks or single-disk pools
-        }
+        "uptime_seconds": 12345,
+        "zpools": [...],
+        "system_devices": {...}
     }
     """
     all_devices = await Device.all()
+    uptime = int(time.time() - psutil.boot_time())
     
     # Get ZFS pools
     zpools = [d for d in all_devices if d.type == "zfs_pool"]
@@ -284,6 +276,7 @@ async def get_inventory_grouped() -> dict:
     network = next((d for d in all_devices if d.type == "network"), None)
     
     return {
+        "uptime_seconds": uptime,
         "zpools": zpool_groups,
         "system_devices": {
             "cpu": {

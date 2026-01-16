@@ -2,15 +2,15 @@
   <q-card class="metrics-panel bg-dark-page text-white shadow-2" bordered>
     <div class="row items-center q-px-md border-bottom-dark bg-header header-height no-wrap">
 
-      <div class="col-4 flex items-center no-wrap">
+      <div class="col-auto flex items-center no-wrap">
         <slot name="title"></slot>
       </div>
 
-      <div class="col-4 flex flex-center no-wrap">
+      <div class="col flex flex-center no-wrap">
         <slot name="header-center"></slot>
       </div>
 
-      <div class="col-4 flex justify-end items-center no-wrap">
+      <div class="col-auto flex justify-end items-center no-wrap">
         <slot name="header-right"></slot>
       </div>
 

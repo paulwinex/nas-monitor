@@ -98,22 +98,40 @@ class NetCollector(BaseCollector):
     dev_type = "network"
 
     def __init__(self):
-        self.prev_io = psutil.net_io_counters(pernic=False)
+        io = psutil.net_io_counters(pernic=False)
+        self.prev_io_sent = io.bytes_sent
+        self.prev_io_recv = io.bytes_recv
         self.prev_time = datetime.now()
 
     async def collect(self) -> list[Metrics]:
         now = datetime.now()
-        curr_io = psutil.net_io_counters(pernic=False)
+        # Sum only physical interfaces to avoid double counting from bridges/veth
+        per_nic = psutil.net_io_counters(pernic=True)
+        
+        # Determine physical interfaces: usually start with en, eth, wl, nic
+        # but also filter out virtuals/bridges like veth, fw*, vmbr*, lo
+        bytes_sent = 0
+        bytes_recv = 0
+        
+        for nic, io in per_nic.items():
+            nic_lower = nic.lower()
+            if nic_lower == 'lo': continue
+            if any(nic_lower.startswith(x) for x in ['veth', 'fw', 'tap', 'br', 'vmbr']): continue
+            
+            bytes_sent += io.bytes_sent
+            bytes_recv += io.bytes_recv
+
         dt = (now - self.prev_time).total_seconds()
         metrics = []
         if dt > 0:
-            up_speed = (curr_io.bytes_sent - self.prev_io.bytes_sent) / dt / 1024
-            down_speed = (curr_io.bytes_recv - self.prev_io.bytes_recv) / dt / 1024
+            up_speed = (bytes_sent - self.prev_io_sent) / dt / 1024
+            down_speed = (bytes_recv - self.prev_io_recv) / dt / 1024
             metrics.extend([
                 Metrics(device_name="net", label="upload", value=round(up_speed, 2)),
                 Metrics(device_name="net", label="download", value=round(down_speed, 2))
             ])
-        self.prev_io = curr_io
+        self.prev_io_sent = bytes_sent
+        self.prev_io_recv = bytes_recv
         self.prev_time = now
         return metrics
 

@@ -18,6 +18,7 @@
       :value="cpuLoad + '%'"
       :temp="cpuTemp"
       :history="cpuHistory"
+      :historySecondary="cpuTempHistory"
       min="0"
       max="100"
       color="#2E93FA"
@@ -31,6 +32,7 @@
       :value="ramUsagePercent + '%'"
       :temp="ramTemp"
       :history="ramHistory"
+      :historySecondary="ramTempHistory"
       :extra-info="ramGbInfo"
       min="0"
       max="100"
@@ -63,7 +65,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useDeviceStore } from 'src/stores/deviceStore';
 import MetricBaseWidget from './MetricBaseWidget.vue';
 import NetworkWidget from './NetworkWidget.vue';
@@ -99,8 +101,17 @@ const cpuHistory = computed(() => {
   return metrics
     .filter(m => m.label === 'load')
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-    .slice(-40)
+    .slice(-300)
     .map(m => Math.round(m.value * 10) / 10);
+});
+
+const cpuTempHistory = computed(() => {
+  const metrics = deviceStore.getDeviceMetrics('cpu');
+  return metrics
+    .filter(m => m.label === 'temp')
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-300)
+    .map(m => Math.round(m.value));
 });
 
 // RAM metrics
@@ -114,8 +125,17 @@ const ramHistory = computed(() => {
   return metrics
     .filter(m => m.label === 'usage_percent')
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-    .slice(-40)
+    .slice(-300)
     .map(m => Math.round(m.value * 10) / 10);
+});
+
+const ramTempHistory = computed(() => {
+  const metrics = deviceStore.getDeviceMetrics('ram');
+  return metrics
+    .filter(m => m.label === 'temp')
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-300)
+    .map(m => Math.round(m.value));
 });
 
 const ramTemp = computed(() => {
@@ -149,7 +169,7 @@ const netUpHistory = computed(() => {
   return metrics
     .filter(m => m.label === 'upload')
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-    .slice(-40)
+    .slice(-300)
     .map(m => Math.round(m.value * 10) / 10);
 });
 
@@ -158,7 +178,7 @@ const netDownHistory = computed(() => {
   return metrics
     .filter(m => m.label === 'download')
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-    .slice(-40)
+    .slice(-300)
     .map(m => Math.round(m.value * 10) / 10);
 });
 
@@ -175,12 +195,43 @@ const getDiskMetric = (diskName, label) => {
 };
 
 
-// Uptime (mock for now as it's not in the store yet)
-const uptimeSeconds = ref(1052100);
+// Uptime (live counter)
+let uptimeTimer = null;
+onMounted(() => {
+  if (!deviceStore.inventory) {
+    deviceStore.initialize();
+  }
+  
+  // Start local uptime ticker
+  uptimeTimer = setInterval(() => {
+    if (deviceStore.uptimeSeconds > 0) {
+      deviceStore.uptimeSeconds++;
+    }
+  }, 1000);
+});
+
+onUnmounted(() => {
+  if (uptimeTimer) clearInterval(uptimeTimer);
+});
+
 const formattedUptime = computed(() => {
-  const d = Math.floor(uptimeSeconds.value / 86400);
-  const h = Math.floor((uptimeSeconds.value % 86400) / 3600);
-  return `${d}d ${h}h`;
+  let seconds = deviceStore.uptimeSeconds;
+  if (!seconds) return '—';
+  
+  const d = Math.floor(seconds / (24 * 3600));
+  seconds %= (24 * 3600);
+  const h = Math.floor(seconds / 3600);
+  seconds %= 3600;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+
+  const parts = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0 || d > 0) parts.push(`${h}h`);
+  if (m > 0 || h > 0 || d > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+  
+  return parts.join(' ');
 });
 </script>
 

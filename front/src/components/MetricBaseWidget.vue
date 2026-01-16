@@ -10,7 +10,7 @@
       </div>
       <div class="col q-px-sm relative-position full-height flex items-center">
         <div class="absolute-full" style="opacity: 0.15; pointer-events: none;">
-          <apexchart type="area" height="100%" width="100%" :options="chartOptions" :series="[{ data: history }]" />
+          <apexchart type="area" height="100%" width="100%" :options="chartOptions" :series="chartSeries" />
         </div>
         <div class="full-width relative-position" style="z-index: 2;">
           <div class="row justify-between items-center no-wrap">
@@ -31,8 +31,16 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 
 const apexchart = VueApexCharts;
-const props = defineProps(['label', 'value', 'temp', 'progress', 'history', 'color', 'extraInfo', 'min', 'max']);
+const props = defineProps(['label', 'value', 'temp', 'progress', 'history', 'historySecondary', 'color', 'extraInfo', 'min', 'max']);
 defineEmits(['click']);
+
+const chartSeries = computed(() => {
+  const s = [{ name: 'Primary', data: props.history || [] }];
+  if (props.historySecondary) {
+    s.push({ name: 'Secondary', data: props.historySecondary });
+  }
+  return s;
+});
 
 const chartOptions = computed(() => ({
   chart: { 
@@ -41,8 +49,8 @@ const chartOptions = computed(() => ({
     background: 'transparent'
   },
   stroke: { curve: 'straight', width: 1 },
-  fill: { type: 'solid', opacity: 0.2 },
-  colors: [props.color || '#2E93FA'],
+  fill: { type: 'solid', opacity: [0.2, 0.05] },
+  colors: [props.color || '#2E93FA', '#ff9800'],
   tooltip: { enabled: false },
   yaxis: {
     min: props.min !== undefined ? parseFloat(props.min) : undefined,

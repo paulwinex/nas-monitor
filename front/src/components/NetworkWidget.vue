@@ -14,9 +14,10 @@
         </div>
         <div class="full-width q-px-sm relative-position" style="z-index: 2;">
           <div class="row justify-between items-center no-wrap">
+            <div class="text-blue-4 text-mono" style="font-size: 11px;">NET</div>
             <div class="column items-end">
-              <div class="text-orange-3 text-weight-bold text-mono" style="font-size: 11px; line-height: 1;">{{ upSpeed }}</div>
-              <div class="text-green-3 text-weight-bold text-mono q-mt-xs" style="font-size: 11px; line-height: 1;">{{ downSpeed }}</div>
+              <div class="text-orange-3 text-weight-bold text-mono" style="font-size: 11px; line-height: 1;">{{ formatSpeed(upSpeed) }}</div>
+              <div class="text-green-3 text-weight-bold text-mono q-mt-xs" style="font-size: 11px; line-height: 1;">{{ formatSpeed(downSpeed) }}</div>
             </div>
           </div>
         </div>
@@ -32,6 +33,16 @@ import VueApexCharts from 'vue3-apexcharts';
 const apexchart = VueApexCharts;
 const props = defineProps(['upSpeed', 'downSpeed', 'upHistory', 'downHistory']);
 defineEmits(['click']);
+
+const formatSpeed = (val) => {
+  if (val === undefined || val === null) return '0 KB/s';
+  const num = parseFloat(val);
+  if (isNaN(num)) return val;
+  if (num >= 1024) {
+    return (num / 1024).toFixed(1) + ' MB/s';
+  }
+  return num.toFixed(1) + ' KB/s';
+};
 
 const series = computed(() => [
   { name: 'Down', data: props.downHistory || [] },
