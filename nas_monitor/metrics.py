@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from tortoise import Tortoise, transactions
 
-from nas_monitor.models import Device, RawMetric, DailyMetric, HistoryMetric, MigrationState
+from nas_monitor.models import Device, RawMetric, HourlyMetric, HistoryMetric, MigrationState
 from nas_monitor.shemas import Metrics
 
 
@@ -19,15 +19,15 @@ async def get_enabled_devices_by_type(dev_type: str):
 # todo: from config
 # data compression time ranges
 RETENTION = {
-    "raw": timedelta(hours=3),
-    "daily": timedelta(days=7),
+    "raw": timedelta(days=30),
+    "hourly": timedelta(days=90),
     "history": timedelta(days=365)
 }
 
 # map type to model
 MODELS_MAP = {
     "raw": RawMetric,
-    "daily": DailyMetric,
+    "hourly": HourlyMetric,
     "history": HistoryMetric
 }
 
@@ -121,7 +121,7 @@ async def run_aggregation(source_model, target_model, stage_name: str, interval_
 async def cleanup_metrics():
     logging.debug('Cleaning up metrics')
     now = datetime.now(timezone.utc)
-    for key, model in [("raw", RawMetric), ("daily", DailyMetric), ("history", HistoryMetric)]:
+    for key, model in MODELS_MAP.items():
         await model.filter(timestamp__lt=now - RETENTION[key]).delete()
 
 
@@ -146,8 +146,8 @@ async def _read_range(model, devices: list[str] = None, labels: list[str] = None
 async def read_raw_range(devices=None, labels=None, start=None, end=None):
     return await _read_range(RawMetric, devices, labels, start, end)
 
-async def read_daily_range(devices=None, labels=None, start=None, end=None):
-    return await _read_range(DailyMetric, devices, labels, start, end)
+async def read_hourly_range(devices=None, labels=None, start=None, end=None):
+    return await _read_range(HourlyMetric, devices, labels, start, end)
 
 async def read_history_range(devices=None, labels=None, start=None, end=None):
     return await _read_range(HistoryMetric, devices, labels, start, end)
@@ -157,6 +157,7 @@ async def read_history_range(devices=None, labels=None, start=None, end=None):
 async def fetch_metrics_data(
         history_type: str,
         device_types: list[str] = None,
+        device_names: list[str] = None,
         start_time: datetime = None,
         end_time: datetime = None
     ) -> list[dict]:
@@ -166,6 +167,8 @@ async def fetch_metrics_data(
     queryset = model.all()
     if device_types:
         queryset = queryset.filter(device__type__in=device_types)
+    if device_names:
+        queryset = queryset.filter(device__name__in=device_names)
     if start_time:
         queryset = queryset.filter(timestamp__gte=start_time)
     if end_time:

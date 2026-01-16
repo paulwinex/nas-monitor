@@ -22,7 +22,7 @@
       min="0"
       max="100"
       color="#2E93FA"
-      @click="handleWidgetClick"
+      @click="handleWidgetClick('cpu')"
     />
 
     <!-- RAM -->
@@ -37,7 +37,7 @@
       min="0"
       max="100"
       color="#00E396"
-      @click="handleWidgetClick"
+      @click="handleWidgetClick('ram')"
     />
 
     <!-- Network -->
@@ -47,18 +47,18 @@
       :downSpeed="netDownload + ' KB/s'"
       :upHistory="netUpHistory"
       :downHistory="netDownHistory"
-      @click="handleWidgetClick"
+      @click="handleWidgetClick('network')"
     />
 
     <!-- Standalone Storage Devices -->
     <DiskUsageWidget
       v-for="disk in deviceStore.standaloneStorage"
       :key="disk.name"
-      :path="disk.details?.path || disk.name"
+      :disk="disk"
       :temp="getDiskTemp(disk.name)"
       :used="getDiskMetric(disk.name, 'used_gb')"
       :total="getDiskMetric(disk.name, 'total_gb')"
-      @click="handleWidgetClick"
+      @click="(d) => handleWidgetClick('disk', d)"
     />
 
   </MetricsPanel>
@@ -74,8 +74,12 @@ import MetricsPanel from "./MetricsPanel.vue";
 
 const deviceStore = useDeviceStore();
 
-const handleWidgetClick = (id) => {
-  console.log('Widget clicked:', id);
+const handleWidgetClick = (id, data) => {
+  const targetId = id?.toLowerCase();
+  if (targetId === 'cpu') deviceStore.selectedDevice = deviceStore.cpu;
+  else if (targetId === 'ram') deviceStore.selectedDevice = deviceStore.ram;
+  else if (targetId === 'network') deviceStore.selectedDevice = deviceStore.network;
+  else if (targetId === 'disk' && data) deviceStore.selectedDevice = data;
 };
 
 // Start initialization if not already started

@@ -32,6 +32,9 @@
           <SystemMetricsWidget />
         </div>
       </div>
+
+      <!-- Device Detail Dialog -->
+      <DeviceDetailDialog />
     </div>
   </q-page>
 </template>
@@ -41,6 +44,7 @@ import { onMounted, onUnmounted } from 'vue';
 import { useDeviceStore } from 'src/stores/deviceStore';
 import ZPoolWidget from "components/ZPoolWidget.vue";
 import SystemMetricsWidget from "components/SystemMetricsWidget.vue";
+import DeviceDetailDialog from "components/DeviceDetailDialog.vue";
 
 const deviceStore = useDeviceStore();
 

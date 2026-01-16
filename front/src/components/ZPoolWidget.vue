@@ -1,7 +1,10 @@
 <template>
   <MetricsPanel :cols="3" min-col-width="150px">
     <template #title>
-      <span class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1">{{ pool.name }}</span>
+      <span 
+        class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1 cursor-pointer" 
+        @click="deviceStore.selectedDevice = pool"
+      >{{ pool.name }}</span>
       <q-badge color="green-9" class="q-ml-sm text-weight-bold" label="ONLINE" size="10px" />
     </template>
 
@@ -69,7 +72,7 @@ const poolUsage = computed(() => {
 
 
 const onDiskHandle = (disk) => {
-  console.log('Action for disk:', disk.name);
+  deviceStore.selectedDevice = disk;
 };
 </script>
 

@@ -24,7 +24,7 @@ class MetricBase(models.Model):
 class RawMetric(MetricBase): pass
 
 
-class DailyMetric(MetricBase): pass
+class HourlyMetric(MetricBase): pass
 
 
 class HistoryMetric(MetricBase): pass

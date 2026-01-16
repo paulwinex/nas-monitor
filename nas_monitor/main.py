@@ -54,8 +54,8 @@ app.include_router(api_router)
 async def get_metriks(payload: RequestMetricsPayload):
     if payload.range_name == 'raw':
         return await mt.read_raw_range()
-    elif payload.range_name == 'daily':
-        return await mt.read_daily_range()
+    elif payload.range_name == 'hourly':
+        return await mt.read_hourly_range()
     elif payload.range_name == 'history':
         return await mt.read_history_range()
 
@@ -79,8 +79,8 @@ async def get_metrics_endpoint(
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None
 ):
-    if history_type not in ["raw", "daily", "history"]:
-        raise HTTPException(status_code=400, detail="history_type must be raw, daily or history")
+    if history_type not in ["raw", "hourly", "history"]:
+        raise HTTPException(status_code=400, detail="history_type must be raw, hourly or history")
     data = await fetch_metrics_data(
         history_type=history_type,
         device_types=device_types,

@@ -2,19 +2,21 @@
   <q-card
     flat v-ripple
     class="metric-item bg-disk border-dark-thin relative-position overflow-hidden cursor-pointer"
-    @click="$emit('click', path)"
+    @click="$emit('click', disk)"
   >
     <div class="row no-wrap full-height items-center relative-position z-top">
       <div class="col-auto flex flex-center bg-grey-10 full-height border-right-dark" style="width: 40px; z-index: 3;">
-        <span class="text-subtitle2 text-weight-bold text-amber-3">{{ temp }}°</span>
+        <span class="text-subtitle2 text-weight-bold" :class="temp > 45 ? 'text-orange' : 'text-blue-3'">
+          {{ temp }}°
+        </span>
       </div>
       <div class="col q-px-sm relative-position full-height flex items-center">
         <div class="full-width">
           <div class="row justify-between no-wrap items-baseline">
-            <div class="text-blue-4 text-weight-bold text-mono" style="font-size: 11px;">{{ path }}</div>
+            <div class="text-blue-4 text-weight-bold text-mono" style="font-size: 11px;">{{ disk.details?.path || disk.name }}</div>
             <div class="text-grey-4 text-mono" style="font-size: 10px;">{{ used }} / {{ total }} GB</div>
           </div>
-          <q-linear-progress :value="used / total" color="green-8" track-color="grey-9" size="3px" class="q-mt-xs" />
+          <q-linear-progress :value="total > 0 ? used / total : 0" color="green-8" track-color="grey-9" size="3px" class="q-mt-xs" />
         </div>
       </div>
     </div>
@@ -22,7 +24,7 @@
 </template>
 
 <script setup>
-defineProps(['path', 'used', 'total', 'temp']);
+defineProps(['disk', 'used', 'total', 'temp']);
 defineEmits(['click']);
 </script>
 

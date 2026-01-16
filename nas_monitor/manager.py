@@ -2,7 +2,15 @@ import logging
 
 from nas_monitor.collectors import BaseCollector
 from nas_monitor.config import config
-from nas_monitor.metrics import add_metrics_batch, get_enabled_devices_by_type
+from nas_monitor.metrics import (
+    add_metrics_batch, 
+    get_enabled_devices_by_type,
+    run_aggregation,
+    cleanup_metrics,
+    RawMetric,
+    HourlyMetric,
+    HistoryMetric
+)
 
 # map collectors by device type
 COLLECTORS = {cls.dev_type: cls() for cls in BaseCollector.__subclasses__()}
@@ -59,4 +67,23 @@ def setup_polling(scheduler):
         job_collector_task, 'interval', 
         seconds=config.COLLECTOR_INTERVAL_ZFS_POOL, 
         args=['zfs_pool']
+    )
+
+    # Aggregation & Cleanup
+    # Raw -> Hourly (every hour)
+    scheduler.add_job(
+        run_aggregation, 'cron',
+        hour='*',
+        args=[RawMetric, HourlyMetric, 'raw_to_hourly', 60]
+    )
+    # Hourly -> History (every day)
+    scheduler.add_job(
+        run_aggregation, 'cron',
+        hour=0,
+        args=[HourlyMetric, HistoryMetric, 'hourly_to_history', 1440]
+    )
+    # Cleanup (every day)
+    scheduler.add_job(
+        cleanup_metrics, 'cron',
+        hour=1
     )

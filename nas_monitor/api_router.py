@@ -53,6 +53,7 @@ async def get_frontend_config():
 async def get_metrics(
     history_type: str = Query(..., description="Record types: raw, daily or history"),
     device_types: Optional[list[str]] = Query(None, description="Device types to filter"),
+    device_names: Optional[list[str]] = Query(None, description="Specific device names to filter"),
     hours: Optional[int] = Query(None, description="Get metrics for last N hours (for raw metrics)"),
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None
@@ -67,8 +68,8 @@ async def get_metrics(
     - from_date: Start time for metrics
     - to_date: End time for metrics
     """
-    if history_type not in ["raw", "daily", "history"]:
-        raise HTTPException(status_code=400, detail="history_type must be raw, daily or history")
+    if history_type not in ["raw", "hourly", "history"]:
+        raise HTTPException(status_code=400, detail="history_type must be raw, hourly or history")
     
     # If hours is provided, calculate from_date
     if hours is not None:
@@ -79,6 +80,7 @@ async def get_metrics(
         data = await fetch_metrics_data(
             history_type=history_type,
             device_types=device_types,
+            device_names=device_names,
             start_time=from_date,
             end_time=to_date
         )
