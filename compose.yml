@@ -1,0 +1,11 @@
+services:
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE=${NAS_API_BASE:-http://localhost:8000}
+    image: nas-monitor-front
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-9091}:80"
+    restart: always
