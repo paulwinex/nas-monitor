@@ -26,6 +26,7 @@ help:
 	@echo ""
 	@echo "Frontend:"
 	@echo "  make dev-front      - Run frontend in dev mode"
+	@echo "  make docker-build-front - Build frontend Docker image"
 	@echo ""
 	@echo "Configuration:"
 	@echo "  REMOTE_HOST=$(REMOTE_HOST)"
@@ -51,26 +52,18 @@ sync:
 	@echo "Files synced successfully!"
 
 setup-remote:
-	@./setup-service.sh remote
+	@./scripts/setup-service.sh remote
 
 setup-local:
-	@./setup-service.sh local
+	@./scripts/setup-service.sh local
 
 remove-remote:
 	@echo "Removing service from $(REMOTE_HOST)..."
-	@ssh "$(REMOTE_HOST)" "systemctl stop nas-monitor 2>/dev/null || true"
-	@ssh "$(REMOTE_HOST)" "systemctl disable nas-monitor 2>/dev/null || true"
-	@ssh "$(REMOTE_HOST)" "rm -f /etc/systemd/system/nas-monitor.service"
-	@ssh "$(REMOTE_HOST)" "systemctl daemon-reload"
-	@echo "Service removed from remote host"
+	@./scripts/remove-service.sh remote
 
 remove-local:
 	@echo "Removing local service..."
-	@sudo systemctl stop nas-monitor 2>/dev/null || true
-	@sudo systemctl disable nas-monitor 2>/dev/null || true
-	@sudo rm -f /etc/systemd/system/nas-monitor.service
-	@sudo systemctl daemon-reload
-	@echo "Service removed from local host"
+	@./scripts/remove-service.sh local
 
 # Running commands
 run:
@@ -104,3 +97,7 @@ logs-remote:
 dev-front:
 	@echo "Starting frontend in dev mode..."
 	@cd front && quasar dev
+
+docker-build-front:
+	@echo "Building frontend Docker image..."
+	@docker build -t nas-monitor-front ./front
