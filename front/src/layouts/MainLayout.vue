@@ -17,29 +17,21 @@
             transition-hide="jump-up"
           >
             <q-list style="min-width: 200px" class="menu-list-dark shadow-24">
-              <q-item clickable v-close-popup disable>
+              <q-item clickable v-close-popup @click="showSystemInfo = true">
                 <q-item-section avatar><q-icon name="info" size="xs"/></q-item-section>
                 <q-item-section>System Info</q-item-section>
               </q-item>
-              <q-item clickable v-close-popup disable>
-                <q-item-section avatar><q-icon name="settings" size="xs"/></q-item-section>
-                <q-item-section>Settings</q-item-section>
-              </q-item>
 
               <q-separator dark />
-              <q-item clickable v-close-popup disable>
+              <q-item clickable v-close-popup @click="confirmPowerAction('restart')">
                 <q-item-section avatar><q-icon name="restart_alt" size="xs"/></q-item-section>
                 <q-item-section>Restart</q-item-section>
               </q-item>
 
-              <q-item clickable v-close-popup disable>
+              <q-item clickable v-close-popup @click="confirmPowerAction('poweroff')">
                 <q-item-section avatar><q-icon name="power_settings_new" size="xs"/></q-item-section>
                 <q-item-section>Power Off</q-item-section>
               </q-item>
-
-
-<!--              <q-separator dark />-->
-
             </q-list>
           </q-menu>
         </q-btn>
@@ -49,6 +41,8 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <SystemInfoDialog v-model="showSystemInfo" />
   </q-layout>
 </template>
 
@@ -71,8 +65,7 @@
 .apexcharts-canvas {
   z-index: 1 !important;
 }
-</style>
-<style>
+
 .q-menu, .q-dialog__inner {
   z-index: 6000 !important;
 }
@@ -86,5 +79,63 @@
   z-index: 1;
 }
 </style>
+
 <script setup lang="ts">
+import { ref } from 'vue';
+import { useQuasar } from 'quasar';
+import { useDeviceStore } from 'src/stores/deviceStore';
+import SystemInfoDialog from 'src/components/SystemInfoDialog.vue';
+
+const $q = useQuasar();
+const deviceStore = useDeviceStore();
+const showSystemInfo = ref(false);
+
+const confirmPowerAction = (action: 'restart' | 'poweroff') => {
+  const isRestart = action === 'restart';
+  
+  $q.dialog({
+    title: isRestart ? 'Confirm Restart' : 'Confirm Power Off',
+    message: isRestart 
+      ? 'Are you sure you want to RESTART the host? The dashboard will be unavailable until it boots back up.' 
+      : 'Are you sure you want to POWER OFF the host? This will shutdown the computer.',
+    persistent: true,
+    dark: true,
+    ok: {
+      flat: true,
+      color: isRestart ? 'blue-4' : 'red-4',
+      label: isRestart ? 'Restart' : 'Shut Down'
+    },
+    cancel: {
+      flat: true,
+      color: 'grey-5'
+    }
+  }).onOk(async () => {
+    try {
+      if (isRestart) {
+        await deviceStore.rebootHost();
+        $q.notify({
+          type: 'positive',
+          message: 'Reboot command sent successfully',
+          color: 'blue-6',
+          position: 'top'
+        });
+      } else {
+        await deviceStore.shutdownHost();
+        $q.notify({
+          type: 'positive',
+          message: 'Power off command sent successfully',
+          color: 'red-6',
+          position: 'top'
+        });
+      }
+    } catch (e) {
+      $q.notify({
+        type: 'negative',
+        message: `Failed to execute: ${e instanceof Error ? e.message : 'Unknown error'}`,
+        color: 'red-8',
+        position: 'top'
+      });
+    }
+  });
+};
 </script>

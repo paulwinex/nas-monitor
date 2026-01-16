@@ -7,6 +7,7 @@ from tortoise import Tortoise, transactions
 
 from nas_monitor.models import Device, RawMetric, HourlyMetric, HistoryMetric, MigrationState
 from nas_monitor.shemas import Metrics
+from nas_monitor.utils.system_info import get_system_uptime
 
 
 async def get_all_devices():
@@ -227,7 +228,7 @@ async def get_inventory_grouped() -> dict:
     """
     # Only return enabled devices for the dashboard
     all_devices = await Device.filter(enabled=True).all()
-    uptime = int(time.time() - psutil.boot_time())
+    uptime = get_system_uptime()
     
     # Get ZFS pools
     zpools = [d for d in all_devices if d.type == "zfs_pool"]

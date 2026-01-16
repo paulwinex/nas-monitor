@@ -9,6 +9,11 @@ from nas_monitor.metrics import (
     get_latest_metrics_by_device,
     get_inventory_grouped
 )
+from nas_monitor.utils.system_info import (
+    get_detailed_system_info,
+    host_reboot,
+    host_poweroff
+)
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -143,6 +148,45 @@ async def update_device(name: str, payload: dict):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update device: {str(e)}")
+
+
+@router.get("/system/info")
+async def get_system_info():
+    """
+    Get detailed host system information.
+    """
+    try:
+        info = await get_detailed_system_info()
+        return {
+            "status": "success",
+            "data": info
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get system info: {str(e)}")
+
+
+@router.post("/host/restart")
+async def restart_host():
+    """
+    Triggers a system reboot.
+    """
+    try:
+        await host_reboot()
+        return {"status": "success", "message": "Reboot triggered"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reboot: {str(e)}")
+
+
+@router.post("/host/poweroff")
+async def poweroff_host():
+    """
+    Triggers a system shutdown.
+    """
+    try:
+        await host_poweroff()
+        return {"status": "success", "message": "Poweroff triggered"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to poweroff: {str(e)}")
 
 
 @router.get("/latest")
