@@ -37,7 +37,7 @@ class AppConfig(BaseSettings):
     # API settings
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
-    CORS_ORIGINS: list[str] = ["http://localhost:9000", "http://localhost:8080"]
+    CORS_ORIGINS: list[str] = ["*"]
     
     # Disable tasks (for testing)
     DISABLE_TASKS: bool = False

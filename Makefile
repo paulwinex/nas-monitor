@@ -1,8 +1,13 @@
 .PHONY: help deploy setup-remote setup-local remove-remote remove-local run dev-front sync
 
-# Load .env file
 include .env
 export
+
+VITE_API_BASE_FROM_ENV := $(shell grep VITE_API_BASE front/.env 2>/dev/null | cut -d= -f2-)
+API_BASE ?= $(VITE_API_BASE_FROM_ENV)
+ifeq ($(API_BASE),)
+  API_BASE := http://localhost:8000
+endif
 
 help:
 	@echo "NAS Monitor - Available Commands"
@@ -100,4 +105,4 @@ dev-front:
 
 docker-build-front:
 	@echo "Building frontend Docker image..."
-	@docker build -t nas-monitor-front ./front
+	@docker build --build-arg VITE_API_BASE=$(API_BASE) -t nas-monitor-front ./front
