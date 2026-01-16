@@ -12,7 +12,7 @@ MODE="${1:-remote}"
 if [ "$MODE" = "local" ]; then
     echo "🔧 Setting up NAS Monitor service locally..."
     
-    sudo cp nas-monitor.service /etc/systemd/system/
+    sudo cp scripts/nas-monitor.service /etc/systemd/system/
     sudo systemctl daemon-reload
     sudo systemctl enable nas-monitor
     sudo systemctl restart nas-monitor
@@ -31,7 +31,7 @@ elif [ "$MODE" = "remote" ]; then
     
     # Copy service file
     echo "Copying service file..."
-    scp nas-monitor.service "$REMOTE_HOST:/etc/systemd/system/"
+    scp scripts/nas-monitor.service "$REMOTE_HOST:/etc/systemd/system/"
     
     # Enable and start service
     echo "Enabling and starting service..."

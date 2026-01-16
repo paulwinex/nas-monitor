@@ -1,93 +1,68 @@
 # Smart Monitor - Deployment Guide
 
-## Backend Deployment
+This project is designed to run the backend on "bare metal" (to have direct access to hardware sensors and ZFS) and the frontend as a static build or a Docker container.
 
-### First Time Setup
+All management is handled via the root `Makefile`.
 
-1. **Deploy files to remote host:**
+## Initial Setup
+
+1. **Configure Environment:**
+   Create a `.env` file in the project root:
    ```bash
-   ./send.sh
+   REMOTE_HOST=root@your-nas-ip
+   REMOTE_PATH=/opt/nas_monitor
    ```
 
-2. **Setup systemd service:**
+2. **Setup Remote Service:**
+   This command installs the `systemd` service on the target host.
    ```bash
-   ./setup-service.sh
+   make setup-remote
    ```
 
-3. **Check service status:**
-   ```bash
-   ssh root@192.168.0.10 systemctl status nas-monitor
-   ```
+## Backend Management
 
-### Subsequent Deployments
-
-Just run the deploy script:
+### Deployment
+Sync files, install dependencies on the host, and restart the service:
 ```bash
-./send.sh
+make deploy
 ```
-
-This will:
-- Sync files to `/opt/nas_monitor` on remote host
-- Install dependencies with `uv sync`
-- Restart the service automatically
 
 ### Logs
-
-View logs on remote host:
+Watch live logs from the remote host:
 ```bash
-ssh root@192.168.0.10 journalctl -u nas-monitor -f
+make logs-remote
 ```
 
-## Frontend Development
+### Service Control
+- `make setup-remote` / `make remove-remote`
+- `make setup-local` / `make remove-local`
+- `make start` / `make stop` / `make restart`
+- `make status`
 
-### Local Development
+## Project Structure
+- `run.sh`: Main entrypoint for the application.
+- `send.sh`: Deployment script.
+- `scripts/`: Auxiliary setup and service management scripts.
+- `front/`: Frontend source and Docker configuration.
 
-1. **Configure API endpoint:**
-   Edit `front/.env`:
-   ```
-   VITE_API_BASE=http://192.168.0.10:8000
-   ```
+The frontend can be run locally for development or built as a Docker image for production sharing.
 
-2. **Install dependencies:**
-   ```bash
-   cd front
-   npm install
-   ```
-
-3. **Run dev server:**
-   ```bash
-   npm run dev
-   ```
-
-Frontend will be available at `http://localhost:9000`
-
-### Production Build
-
+### Development Mode
+Runs the Quasar dev server (requires Node.js and Quasar CLI):
 ```bash
-cd front
-npm run build
+make dev-front
 ```
 
-Build output will be in `front/dist/spa`
+### Production Docker Build
+Builds a multi-stage Docker image that serves the static SPA using Nginx:
+```bash
+make docker-build-front
+```
+The resulting image is tagged as `nas-monitor-front`.
 
-## Configuration
-
-### Backend Configuration
-
-Environment variables (prefix: `NAS_`):
-- `NAS_DB_PATH` - Database path (default: `sqlite://data/metrics_db.sqlite3`)
-- `NAS_COLLECTOR_INTERVAL_CPU` - CPU polling interval in seconds (default: 5)
-- `NAS_COLLECTOR_INTERVAL_RAM` - RAM polling interval in seconds (default: 5)
-- `NAS_COLLECTOR_INTERVAL_NETWORK` - Network polling interval in seconds (default: 3)
-- `NAS_COLLECTOR_INTERVAL_STORAGE` - Storage polling interval in seconds (default: 60)
-- `NAS_COLLECTOR_INTERVAL_ZFS_POOL` - ZFS pool polling interval in seconds (default: 600)
-- `NAS_DISABLE_TASKS` - Disable background tasks (default: false)
-
-Create `.env` file in project root to override defaults.
-
-### Frontend Configuration
-
-Environment variables (prefix: `FRONTEND_`):
-- `FRONTEND_UPDATE_INTERVALS` - JSON object with update intervals
-- `FRONTEND_CHART_HISTORY_POINTS` - Number of points in charts (default: 40)
-- `FRONTEND_RAW_METRICS_HOURS` - Hours of raw metrics to fetch (default: 1)
+## Hardware Requirements
+The backend requires:
+- `smartmontools` (for disk temperatures and health)
+- `zfsutils-linux` (if monitoring ZFS pools)
+- Python 3.10+
+- `uv` (Fast Python package manager)

@@ -1,6 +1,6 @@
 # NAS Monitor (nas-monitor)
 
-NAS Hard drive monitoring
+NAS Hard drive monitoring frontend
 
 ## Install the dependencies
 ```bash

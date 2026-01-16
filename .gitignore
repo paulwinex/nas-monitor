@@ -1,7 +1,7 @@
 .DS_Store
 .thumbs.db
 front/node_modules
-
+data/
 # Quasar core related directories
 front/.quasar
 front/dist
