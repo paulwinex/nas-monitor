@@ -11,7 +11,7 @@
     <template #header-right>
       <span class="text-grey-5 q-mr-sm" style="font-size: 11px;">{{ poolUsage }}</span>
       <div style="width: 50px"><q-linear-progress :value="usagePercent / 100" color="blue-6" track-color="grey-6" /></div>
-      <q-btn icon="info" size="sm" class="q-ml-md" dense color="grey" flat />
+      <q-btn icon="info" size="sm" class="q-ml-md" dense color="grey" flat @click="deviceStore.selectedDevice = pool" />
     </template>
 
     <ZfsDiskWidget
@@ -21,6 +21,7 @@
       :accent-color="CHART_COLORS[index % CHART_COLORS.length]"
       @click="onDiskHandle"
     />
+
   </MetricsPanel>
 </template>
 

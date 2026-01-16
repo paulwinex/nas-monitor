@@ -21,7 +21,7 @@ async def get_enabled_devices_by_type(dev_type: str):
 RETENTION = {
     "raw": timedelta(days=30),
     "hourly": timedelta(days=90),
-    "history": timedelta(days=365)
+    "history": timedelta(days=3650) # 10 years
 }
 
 # map type to model
@@ -225,7 +225,8 @@ async def get_inventory_grouped() -> dict:
         "system_devices": {...}
     }
     """
-    all_devices = await Device.all()
+    # Only return enabled devices for the dashboard
+    all_devices = await Device.filter(enabled=True).all()
     uptime = int(time.time() - psutil.boot_time())
     
     # Get ZFS pools

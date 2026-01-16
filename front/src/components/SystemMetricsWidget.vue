@@ -8,7 +8,7 @@
       <div class="text-mono text-grey-5" style="font-size: 11px;">
         UPTIME: <span class="text-white q-ml-xs">{{ formattedUptime }}</span>
       </div>
-      <q-btn icon="info" size="sm" class="q-ml-md" dense color="grey" flat />
+      <q-btn icon="settings" size="sm" class="q-ml-md" dense color="grey" flat @click="showSettings = true" />
     </template>
 
     <!-- CPU -->
@@ -61,6 +61,10 @@
       @click="(d) => handleWidgetClick('disk', d)"
     />
 
+    <PanelSettingsDialog
+      v-model="showSettings"
+      panel-type="system"
+    />
   </MetricsPanel>
 </template>
 
@@ -71,8 +75,10 @@ import MetricBaseWidget from './MetricBaseWidget.vue';
 import NetworkWidget from './NetworkWidget.vue';
 import DiskUsageWidget from './DiskUsageWidget.vue';
 import MetricsPanel from "./MetricsPanel.vue";
+import PanelSettingsDialog from './PanelSettingsDialog.vue';
 
 const deviceStore = useDeviceStore();
+const showSettings = ref(false);
 
 const handleWidgetClick = (id, data) => {
   const targetId = id?.toLowerCase();

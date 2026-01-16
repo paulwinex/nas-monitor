@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
 
-DATA_PATH = Path(__file__).parent / 'data'
+DATA_PATH = Path(__file__, '../../data').resolve()
 DATA_PATH.mkdir(parents=True, exist_ok=True)
 
 

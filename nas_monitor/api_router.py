@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from nas_monitor.frontend_config import frontend_config
+from nas_monitor.models import Device
 from nas_monitor.metrics import (
     fetch_metrics_data,
     get_latest_metrics_by_device,
@@ -93,6 +94,55 @@ async def get_metrics(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch metrics: {str(e)}")
+
+
+@router.get("/devices")
+async def list_devices():
+    """
+    Get all registered devices (for settings/management)
+    """
+    try:
+        devices = await Device.all().order_by("type", "name")
+        return {
+            "status": "success",
+            "data": [
+                {
+                    "name": d.name,
+                    "type": d.type,
+                    "enabled": d.enabled,
+                    "details": d.details
+                } for d in devices
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list devices: {str(e)}")
+
+
+@router.patch("/devices/{name}")
+async def update_device(name: str, payload: dict):
+    """
+    Update device settings (e.g., enabled status)
+    """
+    try:
+        device = await Device.filter(name=name).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+        
+        if "enabled" in payload:
+            device.enabled = bool(payload["enabled"])
+            await device.save()
+            
+        return {
+            "status": "success",
+            "data": {
+                "name": device.name,
+                "enabled": device.enabled
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update device: {str(e)}")
 
 
 @router.get("/latest")
