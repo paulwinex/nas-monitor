@@ -57,17 +57,25 @@ def datetime_from_timestamp(ts):
     from datetime import datetime, timezone
     return datetime.fromtimestamp(ts, tz=timezone.utc)
 
+def find_admin_command(name: str) -> str:
+    """Find absolute path of an administrative command."""
+    for path in ["/usr/sbin", "/sbin", "/usr/bin", "/bin"]:
+        full_path = os.path.join(path, name)
+        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+            return full_path
+    return name
+
 async def host_reboot():
     """Trigger system reboot."""
     logging.warning("Host reboot triggered!")
-    # In a real environmental, you might need sudo or specific privileges
-    # This assumes the app runner has permissions to run reboot
-    await run_cmd(["sudo", "reboot"])
+    cmd = find_admin_command("reboot")
+    await run_cmd([cmd])
 
 async def host_poweroff():
     """Trigger system poweroff."""
     logging.warning("Host poweroff triggered!")
-    await run_cmd(["sudo", "poweroff"])
+    cmd = find_admin_command("poweroff")
+    await run_cmd([cmd])
 
 def get_system_uptime() -> int:
     """Get system uptime in seconds using /proc/uptime if available, else psutil."""

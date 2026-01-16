@@ -6,16 +6,6 @@
         <q-spinner color="primary" size="50px" />
       </div>
 
-      <!-- Error state -->
-      <div v-else-if="deviceStore.error" class="flex flex-center" style="min-height: 50vh;">
-        <q-banner class="bg-negative text-white">
-          <template v-slot:avatar>
-            <q-icon name="error" color="white" />
-          </template>
-          Error loading data: {{ deviceStore.error }}
-        </q-banner>
-      </div>
-
       <!-- Main content -->
       <div v-else class="row q-col-gutter-md">
         <!-- ZFS Pools (left side) - only pools with multiple disks -->
@@ -35,6 +25,9 @@
 
       <!-- Device Detail Dialog -->
       <DeviceDetailDialog />
+      
+      <!-- Connection Waiting Overlay -->
+      <ConnectionOverlay />
     </div>
   </q-page>
 </template>
@@ -45,6 +38,7 @@ import { useDeviceStore } from 'src/stores/deviceStore';
 import ZPoolWidget from "components/ZPoolWidget.vue";
 import SystemMetricsWidget from "components/SystemMetricsWidget.vue";
 import DeviceDetailDialog from "components/DeviceDetailDialog.vue";
+import ConnectionOverlay from "components/ConnectionOverlay.vue";
 
 const deviceStore = useDeviceStore();
 

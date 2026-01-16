@@ -13,6 +13,7 @@ export const useDeviceStore = defineStore('devices', () => {
     const latestValues = ref({});
     const systemInfo = ref(null);
     const uptimeSeconds = ref(0);
+    const isConnected = ref(true);
     const loading = ref(false);
     const error = ref(null);
 
@@ -57,9 +58,12 @@ export const useDeviceStore = defineStore('devices', () => {
             if (inventory.value?.data?.uptime_seconds) {
                 uptimeSeconds.value = inventory.value.data.uptime_seconds;
             }
+            isConnected.value = true;
         } catch (e) {
-            error.value = e.message;
+            isConnected.value = false;
+            error.value = 'Failed to connect to server';
             console.error('Failed to load inventory:', e);
+            startReconnectionLoop();
         } finally {
             loading.value = false;
         }
@@ -108,11 +112,15 @@ export const useDeviceStore = defineStore('devices', () => {
      * Update latest values for current indicators
      */
     async function updateLatestValues(deviceTypes = null) {
+        if (!isConnected.value) return;
         try {
             const response = await api.getLatest(deviceTypes);
             latestValues.value = { ...latestValues.value, ...response.data };
+            isConnected.value = true;
         } catch (e) {
             console.error('Failed to update latest values:', e);
+            isConnected.value = false;
+            startReconnectionLoop();
         }
     }
 
@@ -195,6 +203,39 @@ export const useDeviceStore = defineStore('devices', () => {
         }
     }
 
+    let reconnectionTimer = null;
+    function startReconnectionLoop() {
+        if (reconnectionTimer) return;
+
+        console.log('Starting reconnection loop...');
+        reconnectionTimer = setInterval(async () => {
+            if (isConnected.value) {
+                clearInterval(reconnectionTimer);
+                reconnectionTimer = null;
+                return;
+            }
+
+            try {
+                const data = await api.getInventory();
+                if (data.status === 'success') {
+                    console.log('Server is back! Resuming...');
+                    inventory.value = data.data;
+                    isConnected.value = true;
+                    error.value = null;
+                    clearInterval(reconnectionTimer);
+                    reconnectionTimer = null;
+
+                    // Trigger a fresh poll of everything that was being polled
+                    if (pollingStates.value.size > 0) {
+                        pollMetrics();
+                    }
+                }
+            } catch (e) {
+                // Still down
+            }
+        }, 3000);
+    }
+
     /**
      * Start polling for specific device types
      */
@@ -273,6 +314,7 @@ export const useDeviceStore = defineStore('devices', () => {
         allDevices,
         systemInfo,
         uptimeSeconds,
+        isConnected,
         loading,
         error,
 

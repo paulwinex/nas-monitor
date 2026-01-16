@@ -32,7 +32,7 @@ rsync -av -P \
 
 echo "Files synced successfully!"
 
-echo "🔧 Installing dependencies on remote host..."
+echo "Installing dependencies on remote host..."
 ssh "$REMOTE_HOST" "cd $REMOTE_PATH && uv sync"
 
 echo "Restarting service..."
