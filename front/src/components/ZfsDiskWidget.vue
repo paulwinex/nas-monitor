@@ -10,30 +10,31 @@
         class="col-auto flex flex-center bg-grey-10 full-height border-right-dark"
         style="width: 40px; z-index: 3;"
       >
-        <span class="text-subtitle2 text-weight-bold" :class="disk.temp > 40 ? 'text-orange' : 'text-blue-3'">
-          {{ disk.temp }}°
+        <span class="text-subtitle2 text-weight-bold" :class="currentTemp > 45 ? 'text-orange' : 'text-blue-3'">
+          {{ currentTemp }}°
         </span>
       </div>
 
       <div class="col q-px-sm relative-position full-height flex items-center">
         <div class="absolute-full" style="opacity: 0.2; pointer-events: none; margin-top: 12px;">
           <apexchart
+            v-if="tempHistory.length > 0"
             type="area"
             height="100%"
             width="100%"
             :options="chartOptions"
-            :series="[{ data: disk.history }]"
+            :series="[{ data: tempHistory }]"
           />
         </div>
 
         <div class="full-width relative-position" style="z-index: 2;">
           <div class="row justify-between no-wrap">
-            <div class="text-blue-4 text-weight-bold text-mono" style="font-size: 11px;">{{ disk.path }}</div>
-            <div class="text-grey-4 ellipsis q-ml-xs" style="font-size: 10px; max-width: 90px;">{{ disk.model }}</div>
+            <div class="text-blue-4 text-weight-bold text-mono" style="font-size: 11px;">{{ diskPath }}</div>
+            <div class="text-grey-4 ellipsis q-ml-xs" style="font-size: 10px; max-width: 90px;">{{ diskModel }}</div>
           </div>
           <div class="row justify-between no-wrap">
-            <div class="text-grey-6 text-mono" style="font-size: 9px;">SN: {{ disk.sn }}</div>
-            <q-badge :color="disk.smart === 'OK' ? 'positive' : 'negative'" rounded style="width: 5px; height: 5px;" />
+            <div class="text-grey-6 text-mono" style="font-size: 9px;">SN: {{ disk.name }}</div>
+            <q-badge :color="smartStatusColor" rounded style="width: 5px; height: 5px;" />
           </div>
         </div>
       </div>
@@ -48,6 +49,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useDeviceStore } from 'src/stores/deviceStore';
 import VueApexCharts from 'vue3-apexcharts';
 
 const apexchart = VueApexCharts;
@@ -65,6 +67,43 @@ const props = defineProps({
 
 defineEmits(['click']);
 
+const deviceStore = useDeviceStore();
+
+// Get current temperature
+const currentTemp = computed(() => {
+  const temp = deviceStore.getLatestValue(props.disk.name, 'temp');
+  return temp !== undefined ? Math.round(temp) : '--';
+});
+
+// Get SMART health status
+const smartHealth = computed(() => {
+  const health = deviceStore.getLatestValue(props.disk.name, 'health');
+  return health !== undefined ? health : 0;
+});
+
+const smartStatusColor = computed(() => {
+  const health = smartHealth.value;
+  if (health === 0) return 'positive';  // OK
+  if (health === 1) return 'warning';   // Warning
+  return 'negative';  // Critical or Failed
+});
+
+// Get temperature history from metrics
+const tempHistory = computed(() => {
+  const metrics = deviceStore.getDeviceMetrics(props.disk.name);
+  const tempMetrics = metrics
+    .filter(m => m.label === 'temp')
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-40)  // Last 40 points
+    .map(m => Math.round(m.value));
+  
+  return tempMetrics.length > 0 ? tempMetrics : [currentTemp.value];
+});
+
+// Get disk details
+const diskPath = computed(() => props.disk.details?.path || '');
+const diskModel = computed(() => props.disk.details?.model || '');
+
 const chartOptions = computed(() => ({
   chart: {
     sparkline: { enabled: true },
@@ -78,9 +117,14 @@ const chartOptions = computed(() => ({
   stroke: { curve: 'straight', width: 1 },
   fill: { type: 'solid', opacity: 0.2 },
   colors: [props.accentColor],
-  tooltip: { enabled: false }
+  tooltip: { enabled: false },
+  yaxis: {
+    min: 0,
+    max: 70
+  }
 }));
 </script>
+
 
 <style scoped>
 .bg-disk { background: #161616; }

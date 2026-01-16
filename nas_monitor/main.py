@@ -6,7 +6,11 @@ from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+
+from nas_monitor.config import config
+from nas_monitor.api_router import router as api_router
 
 from nas_monitor.models import model_to_dict, init_db, disconnect_db
 from nas_monitor import metrics as mt
@@ -20,7 +24,7 @@ from nas_monitor.shemas import RequestMetricsPayload
 async def lifespan(app: FastAPI):
     scheduler = AsyncIOScheduler()
     await init_db()
-    if not os.getenv('NOTASKS'):
+    if not config.DISABLE_TASKS:
         setup_polling(scheduler)
     await perform_inventory()
     scheduler.start()
@@ -32,6 +36,18 @@ app = FastAPI(
     title="NAS Monitor",
     lifespan=lifespan
 )
+
+# CORS middleware for frontend development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API router
+app.include_router(api_router)
 
 
 @app.get("/api/status")

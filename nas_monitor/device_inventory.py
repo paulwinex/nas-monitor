@@ -39,14 +39,30 @@ async def _get_zfs_serial_mapping() -> dict[str, str]:
                 # skip special devices (raidz, mirror)
                 if vdev_path == current_pool or any(x in vdev_path for x in ["raidz", "mirror", "logs", "cache"]):
                     continue
-                try:
-                    sn_candidate = vdev_path.split('_')[-1].split('-part')[0]
-                    mapping[sn_candidate] = current_pool
-                except IndexError:
-                    continue
+                
+                # Cleanup the path/name to find potential serials
+                dev_name = vdev_path.split('/')[-1]
+                
+                # Try to extract the core identifier
+                clean_name = dev_name.replace('-part', '').replace('_1', '')
+                for segment in clean_name.split('_'):
+                    if len(segment) > 8: # probable SN or WWN
+                        mapping[segment] = current_pool
+                
+                # Handle /dev/nvme0n1p3 format specifically
+                # Use regex to strip the partition part (pX)
+                base_nvme = re.sub(r'p\d+$', '', dev_name)
+                mapping[base_nvme] = current_pool
+
+                
+                # Always map the verbatim name found in zpool status
+                mapping[dev_name] = current_pool
+                mapping[vdev_path] = current_pool
+
     except Exception as e:
         print(f"Error mapping ZFS devices: {e}")
     return mapping
+
 
 
 async def get_cpu_model_name() -> str:
@@ -130,15 +146,34 @@ async def perform_inventory():
 
     sn_to_pool = await _get_zfs_serial_mapping()
     try:
-        proc = await asyncio.create_subprocess_exec("zpool", "list", "-H", "-o", "name,size", stdout=asyncio.subprocess.PIPE)
+        # Use 'zfs list' for USABLE capacity instead of 'zpool list' which is RAW capacity
+        proc = await asyncio.create_subprocess_exec(
+            "zfs", "list", "-H", "-p", "-o", "name,avail,used", 
+            stdout=asyncio.subprocess.PIPE
+        )
         stdout, _ = await proc.communicate()
         if stdout:
             for line in stdout.decode().strip().split('\n'):
-                name, size = line.split()
+                if '/' in line: continue # skip datasets, only root pools
+                name, avail, used = line.split()
+                # Use raw bytes for more accurate summing before rounding
+                avail_bytes = int(avail)
+                used_bytes = int(used)
+                total_bytes = avail_bytes + used_bytes
+                
+                # Convert to human readable like '26.0T' or '500G'
+                tb = total_bytes / (1024**4)
+                if tb >= 1:
+                    size_str = f"{tb:.1f}T"
+                else:
+                    gb = total_bytes / (1024**3)
+                    size_str = f"{gb:.1f}G"
+                    
                 await Device.update_or_create(
                     name=name,
-                    defaults={"type": "zfs_pool", "details": {"max_size": size}}
+                    defaults={"type": "zfs_pool", "details": {"max_size": size_str}}
                 )
+
     except OSError:
         pass
 
@@ -161,10 +196,17 @@ async def perform_inventory():
                 if sn:
                     pool_name = sn_to_pool.get(sn)
                     if pool_name is None:
+                        # Improved partial match for serials (often prefix/suffix matches)
                         for zfs_sn, p_name in sn_to_pool.items():
                             if sn in zfs_sn or zfs_sn in sn:
                                 pool_name = p_name
                                 break
+                    
+                    # One more check: sometimes /dev/ name is used in zpool status
+                    if pool_name is None:
+                        # we would need more info from zpool status here but for now 
+                        # let's trust _get_zfs_serial_mapping's detection of vdev paths
+                        pass
 
                     await Device.update_or_create(
                         name=sn,
@@ -179,6 +221,7 @@ async def perform_inventory():
                             }
                         }
                     )
+
     except Exception as e:
         logging.error(f"Disk inventory error: {e}")
 

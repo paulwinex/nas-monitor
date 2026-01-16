@@ -11,100 +11,178 @@
       <q-btn icon="info" size="sm" class="q-ml-md" dense color="grey" flat />
     </template>
 
-
+    <!-- CPU -->
     <MetricBaseWidget
-      label="CPU" :value="sysState.cpu.load + '%'"
-      :temp="sysState.cpu.temp" :progress="sysState.cpu.load/100"
-      :history="sysState.cpu.history" color="#2E93FA"
+      v-if="deviceStore.cpu"
+      label="CPU"
+      :value="cpuLoad + '%'"
+      :temp="cpuTemp"
+      :history="cpuHistory"
+      min="0"
+      max="100"
+      color="#2E93FA"
       @click="handleWidgetClick"
     />
 
+    <!-- RAM -->
     <MetricBaseWidget
-      label="RAM" :value="sysState.ram.used + ' GB'"
-      :temp="sysState.ram.temp" :progress="sysState.ram.used/sysState.ram.total"
-      :history="sysState.ram.history" color="#00E396"
+      v-if="deviceStore.ram"
+      label="RAM"
+      :value="ramUsagePercent + '%'"
+      :temp="ramTemp"
+      :history="ramHistory"
+      :extra-info="ramGbInfo"
+      min="0"
+      max="100"
+      color="#00E396"
       @click="handleWidgetClick"
     />
 
+    <!-- Network -->
     <NetworkWidget
-      :upSpeed="sysState.net.up + ' MB/s'" :downSpeed="sysState.net.down + ' MB/s'"
-      :upHistory="sysState.net.upHistory" :downHistory="sysState.net.downHistory"
+      v-if="deviceStore.network"
+      :upSpeed="netUpload + ' KB/s'"
+      :downSpeed="netDownload + ' KB/s'"
+      :upHistory="netUpHistory"
+      :downHistory="netDownHistory"
       @click="handleWidgetClick"
     />
 
+    <!-- Standalone Storage Devices -->
     <DiskUsageWidget
-      :path="sysState.osDisk.path" :temp="sysState.osDisk.temp"
-      :used="sysState.osDisk.used" :total="sysState.osDisk.total"
+      v-for="disk in deviceStore.standaloneStorage"
+      :key="disk.name"
+      :path="disk.details?.path || disk.name"
+      :temp="getDiskTemp(disk.name)"
+      :used="getDiskMetric(disk.name, 'used_gb')"
+      :total="getDiskMetric(disk.name, 'total_gb')"
       @click="handleWidgetClick"
     />
+
   </MetricsPanel>
 </template>
 
 <script setup>
-import { reactive, onMounted, onUnmounted, computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
+import { useDeviceStore } from 'src/stores/deviceStore';
 import MetricBaseWidget from './MetricBaseWidget.vue';
 import NetworkWidget from './NetworkWidget.vue';
 import DiskUsageWidget from './DiskUsageWidget.vue';
 import MetricsPanel from "./MetricsPanel.vue";
 
-const sysState = reactive({
-  cpu: { load: 0, temp: 0, history: Array(40).fill(0) },
-  ram: { used: 0, total: 32, temp: 0, history: Array(40).fill(0) },
-  net: { up: 0, down: 0, upHistory: Array(40).fill(0), downHistory: Array(40).fill(0) },
-  osDisk: { path: '/dev/nvme', used: 120, total: 500, temp: 31 }
-});
+const deviceStore = useDeviceStore();
 
 const handleWidgetClick = (id) => {
   console.log('Widget clicked:', id);
-  // Здесь может быть вызов модального окна или роутинг
 };
 
-// ... (остальная логика updateData и таймеров без изменений)
-const updateData = () => {
-  sysState.cpu.load = Math.floor(Math.random() * 100);
-  sysState.cpu.temp = 40 + Math.floor(Math.random() * 20);
-  sysState.cpu.history.push(sysState.cpu.load);
-  sysState.cpu.history.shift();
+// Start initialization if not already started
+onMounted(() => {
+  if (!deviceStore.inventory) {
+    deviceStore.initialize();
+  }
+});
 
-  sysState.ram.used = +(10 + Math.random() * 10).toFixed(1);
-  sysState.ram.temp = 35 + Math.floor(Math.random() * 10);
-  sysState.ram.history.push(sysState.ram.used);
-  sysState.ram.history.shift();
+// CPU metrics
+const cpuLoad = computed(() => {
+  const load = deviceStore.getLatestValue('cpu', 'load');
+  return load !== undefined ? Math.round(load * 10) / 10 : 0;
+});
 
-  sysState.net.up = +(Math.random() * 5).toFixed(1);
-  sysState.net.down = +(Math.random() * 50).toFixed(1);
-  sysState.net.upHistory.push(sysState.net.up);
-  sysState.net.downHistory.push(sysState.net.down);
-  sysState.net.upHistory.shift();
-  sysState.net.downHistory.shift();
+const cpuTemp = computed(() => {
+  const temp = deviceStore.getLatestValue('cpu', 'temp');
+  return temp !== undefined ? Math.round(temp) : 0;
+});
+
+const cpuHistory = computed(() => {
+  const metrics = deviceStore.getDeviceMetrics('cpu');
+  return metrics
+    .filter(m => m.label === 'load')
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-40)
+    .map(m => Math.round(m.value * 10) / 10);
+});
+
+// RAM metrics
+const ramUsagePercent = computed(() => {
+  const percent = deviceStore.getLatestValue('ram', 'usage_percent');
+  return percent !== undefined ? Math.round(percent * 10) / 10 : 0;
+});
+
+const ramHistory = computed(() => {
+  const metrics = deviceStore.getDeviceMetrics('ram');
+  return metrics
+    .filter(m => m.label === 'usage_percent')
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-40)
+    .map(m => Math.round(m.value * 10) / 10);
+});
+
+const ramTemp = computed(() => {
+  const temp = deviceStore.getLatestValue('ram', 'temp');
+  return temp !== undefined ? Math.round(temp) : 0;
+});
+
+
+const ramGbInfo = computed(() => {
+  const used = deviceStore.getLatestValue('ram', 'used_gb');
+  const total = deviceStore.ram?.details?.total_gb;
+  if (used !== undefined && total !== undefined) {
+    return `${used.toFixed(1)} / ${total.toFixed(0)} GB`;
+  }
+  return '';
+});
+
+// Network metrics
+const netUpload = computed(() => {
+  const upload = deviceStore.getLatestValue('net', 'upload');
+  return upload !== undefined ? Math.round(upload * 10) / 10 : 0;
+});
+
+const netDownload = computed(() => {
+  const download = deviceStore.getLatestValue('net', 'download');
+  return download !== undefined ? Math.round(download * 10) / 10 : 0;
+});
+
+const netUpHistory = computed(() => {
+  const metrics = deviceStore.getDeviceMetrics('net');
+  return metrics
+    .filter(m => m.label === 'upload')
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-40)
+    .map(m => Math.round(m.value * 10) / 10);
+});
+
+const netDownHistory = computed(() => {
+  const metrics = deviceStore.getDeviceMetrics('net');
+  return metrics
+    .filter(m => m.label === 'download')
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-40)
+    .map(m => Math.round(m.value * 10) / 10);
+});
+
+// Helper for disk temperature
+const getDiskTemp = (diskName) => {
+  const temp = deviceStore.getLatestValue(diskName, 'temp');
+  return temp !== undefined ? Math.round(temp) : 0;
 };
 
+// Helper for disk usage
+const getDiskMetric = (diskName, label) => {
+  const val = deviceStore.getLatestValue(diskName, label);
+  return val !== undefined ? val : 0;
+};
+
+
+// Uptime (mock for now as it's not in the store yet)
 const uptimeSeconds = ref(1052100);
 const formattedUptime = computed(() => {
   const d = Math.floor(uptimeSeconds.value / 86400);
   const h = Math.floor((uptimeSeconds.value % 86400) / 3600);
   return `${d}d ${h}h`;
 });
-
-let timer;
-onMounted(() => {
-  updateData();
-  timer = setInterval(updateData, 5000);
-  setInterval(() => uptimeSeconds.value++, 1000);
-});
-onUnmounted(() => clearInterval(timer));
 </script>
 
-<style scoped>
-.bg-dark-page { background: #0a0a0a; }
-.bg-header { background: #121212; }
-.border-bottom-dark { border-bottom: 1px solid #1f1f1f; }
-.system-metrics-widget { border: 1px solid #1f1f1f; border-radius: 4px; overflow: hidden; }
-.metrics-grid {
-  display: grid;
-  grid-template-rows: repeat(2, 48px);
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
-  gap: 8px;
-}
-</style>
+
+

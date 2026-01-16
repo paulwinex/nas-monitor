@@ -1,0 +1,15 @@
+[Unit]
+Description=NAS Monitor Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/nas_monitor
+Environment="PATH=/opt/nas_monitor/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/opt/nas_monitor/run.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

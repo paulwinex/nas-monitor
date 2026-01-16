@@ -1,19 +1,19 @@
 <template>
   <MetricsPanel :cols="3" min-col-width="150px">
     <template #title>
-      <span class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1">{{ poolState.name }}</span>
+      <span class="text-subtitle2 text-weight-bolder text-blue-4 uppercase tracking-1">{{ pool.name }}</span>
       <q-badge color="green-9" class="q-ml-sm text-weight-bold" label="ONLINE" size="10px" />
     </template>
 
     <template #header-right>
-      <span class="text-grey-5 q-mr-sm" style="font-size: 11px;">{{ poolState.usedSize }} / {{ poolState.totalSize }}</span>
-      <div style="width: 50px"><q-linear-progress :value="0.6" color="blue-6" track-color="grey-6" /></div>
+      <span class="text-grey-5 q-mr-sm" style="font-size: 11px;">{{ poolUsage }}</span>
+      <div style="width: 50px"><q-linear-progress :value="usagePercent / 100" color="blue-6" track-color="grey-6" /></div>
       <q-btn icon="info" size="sm" class="q-ml-md" dense color="grey" flat />
     </template>
 
     <ZfsDiskWidget
-      v-for="(disk, index) in poolState.disks"
-      :key="disk.sn"
+      v-for="(disk, index) in pool.disks"
+      :key="disk.name"
       :disk="disk"
       :accent-color="CHART_COLORS[index % CHART_COLORS.length]"
       @click="onDiskHandle"
@@ -22,48 +22,54 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, onUnmounted } from 'vue';
+import { computed } from 'vue';
+import { useDeviceStore } from 'src/stores/deviceStore';
 import ZfsDiskWidget from './ZfsDiskWidget.vue';
 import MetricsPanel from "components/MetricsPanel.vue";
 
+const props = defineProps({
+  pool: {
+    type: Object,
+    required: true
+  }
+});
+
+const deviceStore = useDeviceStore();
+
 const CHART_COLORS = ['#2E93FA', '#00E396', '#FEB019', '#FF4560', '#775DD0', '#546E7A'];
 
-const poolState = reactive({
-  name: 'STORE',
-  usedSize: '4.2 TB',
-  totalSize: '26.0 TB',
-  disks: [
-    { path: '/dev/sda', model: 'HGST Ultrastar', sn: 'K7G8L9P0', temp: 32, smart: 'OK', history: Array(21).fill(32) },
-    { path: '/dev/sdb', model: 'HGST Ultrastar', sn: 'K7G8L9P1', temp: 33, smart: 'OK', history: Array(21).fill(33) },
-    { path: '/dev/sdc', model: 'HGST Ultrastar', sn: 'K7G8L9P2', temp: 41, smart: 'OK', history: Array(21).fill(41) },
-    { path: '/dev/sdd', model: 'HGST Ultrastar', sn: 'K7G8L9P3', temp: 34, smart: 'OK', history: Array(21).fill(34) },
-    { path: '/dev/sde', model: 'Crucial MX500', sn: 'CT500MX1', temp: 29, smart: 'OK', history: Array(21).fill(29) },
-    { path: '/dev/sdf', model: 'Crucial MX500', sn: 'CT500MX2', temp: 30, smart: 'OK', history: Array(21).fill(30) },
-  ]
+// Get pool usage from latest metrics
+const usedGb = computed(() => deviceStore.getLatestValue(props.pool.name, 'used_gb') || 0);
+const totalGb = computed(() => {
+  const latestTotal = deviceStore.getLatestValue(props.pool.name, 'total_gb');
+  if (latestTotal) return latestTotal;
+  // Fallback to inventory max_size parsing if metric not yet available
+  const ms = props.pool.details?.max_size || '0';
+  const val = parseFloat(ms);
+  return ms.toUpperCase().includes('T') ? val * 1024 : val;
 });
 
-const fetchPoolData = () => {
-  poolState.disks.forEach(disk => {
-    const variation = Math.floor(Math.random() * 3) - 1;
-    const newTemp = Math.max(20, Math.min(60, disk.temp + variation));
-    disk.temp = newTemp;
-    disk.history.push(newTemp);
-    if (disk.history.length > 21) disk.history.shift();
-  });
-};
-
-let pollingTimer = null;
-onMounted(() => {
-  fetchPoolData();
-  pollingTimer = setInterval(fetchPoolData, 5000);
+const usagePercent = computed(() => {
+  const percent = deviceStore.getLatestValue(props.pool.name, 'usage_percent');
+  if (percent !== undefined) return percent;
+  return totalGb.value > 0 ? (usedGb.value / totalGb.value * 100) : 0;
 });
 
-onUnmounted(() => {
-  if (pollingTimer) clearInterval(pollingTimer);
+const poolUsage = computed(() => {
+  const used = usedGb.value;
+  const total = totalGb.value;
+  
+  const formatSize = (gb) => {
+    if (gb >= 1024) return `${(gb/1024).toFixed(1)} TB`;
+    return `${gb.toFixed(1)} GB`;
+  };
+
+  return `${formatSize(used)} / ${formatSize(total)}`;
 });
+
 
 const onDiskHandle = (disk) => {
-  console.log('Action for disk:', disk.path);
+  console.log('Action for disk:', disk.name);
 };
 </script>
 
@@ -83,3 +89,4 @@ const onDiskHandle = (disk) => {
   overflow-x: auto;
 }
 </style>
+

@@ -9,15 +9,17 @@
         <span class="text-subtitle2 text-weight-bold" :class="temp > 50 ? 'text-orange' : 'text-blue-3'">{{ temp }}°</span>
       </div>
       <div class="col q-px-sm relative-position full-height flex items-center">
-        <div class="absolute-full" style="opacity: 0.15; pointer-events: none; margin-top: 10px;">
+        <div class="absolute-full" style="opacity: 0.15; pointer-events: none;">
           <apexchart type="area" height="100%" width="100%" :options="chartOptions" :series="[{ data: history }]" />
         </div>
         <div class="full-width relative-position" style="z-index: 2;">
           <div class="row justify-between items-center no-wrap">
             <div class="text-blue-4 text-weight-bold- text-mono" style="font-size: 11px;">{{ label }}</div>
-            <div class="text-white text-weight-bolder- text-mono" style="font-size: 12px;">{{ value }}</div>
+            <div class="column items-end no-wrap">
+              <div class="text-white text-weight-bolder- text-mono" style="font-size: 12px;">{{ value }}</div>
+              <div v-if="extraInfo" class="text-grey-6 text-mono" style="font-size: 9px; margin-top: -2px;">{{ extraInfo }}</div>
+            </div>
           </div>
-          <q-linear-progress :value="progress" color="blue-6" size="3px" class="q-mt-xs" />
         </div>
       </div>
     </div>
@@ -29,17 +31,27 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 
 const apexchart = VueApexCharts;
-const props = defineProps(['label', 'value', 'temp', 'progress', 'history', 'color']);
+const props = defineProps(['label', 'value', 'temp', 'progress', 'history', 'color', 'extraInfo', 'min', 'max']);
 defineEmits(['click']);
 
 const chartOptions = computed(() => ({
-  chart: { sparkline: { enabled: true }, animations: { enabled: false }, background: 'transparent' },
+  chart: { 
+    sparkline: { enabled: true }, 
+    animations: { enabled: false }, 
+    background: 'transparent'
+  },
   stroke: { curve: 'straight', width: 1 },
   fill: { type: 'solid', opacity: 0.2 },
   colors: [props.color || '#2E93FA'],
-  tooltip: { enabled: false }
+  tooltip: { enabled: false },
+  yaxis: {
+    min: props.min !== undefined ? parseFloat(props.min) : undefined,
+    max: props.max !== undefined ? parseFloat(props.max) : undefined
+  }
 }));
 </script>
+
+
 
 <style scoped>
 .bg-disk { background: #161616; }

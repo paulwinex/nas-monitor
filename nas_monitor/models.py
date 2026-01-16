@@ -1,6 +1,7 @@
 import logging
 
 from tortoise import models, fields, Tortoise
+from nas_monitor.config import config
 
 
 class Device(models.Model):
@@ -34,8 +35,6 @@ class MigrationState(models.Model):
     last_processed_id = fields.BigIntField(default=0)
 
 
-DB_PATH = "sqlite://data/metrics_db.sqlite3"
-
 
 def model_to_dict(obj):
     # _meta.fields содержит список всех имен полей модели
@@ -43,7 +42,7 @@ def model_to_dict(obj):
 
 
 async def init_db():
-    await Tortoise.init(db_url=DB_PATH, modules={'models': [__name__]})
+    await Tortoise.init(db_url=config.DB_PATH, modules={'models': [__name__]})
     await Tortoise.generate_schemas()
     logging.info('Schemas generated!')
 

@@ -176,3 +176,134 @@ async def fetch_metrics_data(
         device_name="device__name",
         device_type="device__type"
     )
+
+
+async def get_latest_metrics_by_device(device_types: list[str] = None) -> dict:
+    """
+    Get latest metric value for each device/label combination.
+    Returns dict: {device_name: {label: value}}
+    """
+    queryset = RawMetric.all()
+    if device_types:
+        queryset = queryset.filter(device__type__in=device_types)
+    
+    # Get latest metrics grouped by device and label
+    results = await queryset.order_by("-timestamp").values(
+        "timestamp",
+        "label",
+        "value",
+        device_name="device__name"
+    )
+    
+    # Group by device and label, keeping only the latest
+    latest = {}
+    seen = set()
+    
+    for row in results:
+        key = (row['device_name'], row['label'])
+        if key not in seen:
+            seen.add(key)
+            if row['device_name'] not in latest:
+                latest[row['device_name']] = {}
+            latest[row['device_name']][row['label']] = row['value']
+    
+    return latest
+
+
+async def get_inventory_grouped() -> dict:
+    """
+    Get devices grouped by ZFS pools and standalone devices.
+    Returns:
+    {
+        "zpools": [
+            {
+                "name": "pool_name",
+                "type": "zfs_pool",
+                "details": {...},
+                "disks": [...]  # Only pools with >1 disk
+            }
+        ],
+        "system_devices": {
+            "cpu": {...},
+            "ram": {...},
+            "network": {...},
+            "storage": [...]  # Standalone disks or single-disk pools
+        }
+    }
+    """
+    all_devices = await Device.all()
+    
+    # Get ZFS pools
+    zpools = [d for d in all_devices if d.type == "zfs_pool"]
+    
+    # Get storage devices
+    storage_devices = [d for d in all_devices if d.type == "storage"]
+    
+    # Map storage devices to their pools
+    storage_by_pool = {}
+    standalone_storage = []
+    
+    for disk in storage_devices:
+        pool_name = disk.details.get("zfs_pool") if disk.details else None
+        if pool_name:
+            if pool_name not in storage_by_pool:
+                storage_by_pool[pool_name] = []
+            storage_by_pool[pool_name].append({
+                "name": disk.name,
+                "type": disk.type,
+                "enabled": disk.enabled,
+                "details": disk.details
+            })
+        else:
+            standalone_storage.append({
+                "name": disk.name,
+                "type": disk.type,
+                "enabled": disk.enabled,
+                "details": disk.details
+            })
+    
+    # Build zpool groups (only pools with >1 disk)
+    zpool_groups = []
+    for pool in zpools:
+        pool_disks = storage_by_pool.get(pool.name, [])
+        if len(pool_disks) > 1:
+            zpool_groups.append({
+                "name": pool.name,
+                "type": pool.type,
+                "enabled": pool.enabled,
+                "details": pool.details,
+                "disks": pool_disks
+            })
+        elif len(pool_disks) == 1:
+            # Single disk pool goes to standalone
+            standalone_storage.extend(pool_disks)
+    
+    # Get system devices
+    cpu = next((d for d in all_devices if d.type == "cpu"), None)
+    ram = next((d for d in all_devices if d.type == "ram"), None)
+    network = next((d for d in all_devices if d.type == "network"), None)
+    
+    return {
+        "zpools": zpool_groups,
+        "system_devices": {
+            "cpu": {
+                "name": cpu.name,
+                "type": cpu.type,
+                "enabled": cpu.enabled,
+                "details": cpu.details
+            } if cpu else None,
+            "ram": {
+                "name": ram.name,
+                "type": ram.type,
+                "enabled": ram.enabled,
+                "details": ram.details
+            } if ram else None,
+            "network": {
+                "name": network.name,
+                "type": network.type,
+                "enabled": network.enabled,
+                "details": network.details
+            } if network else None,
+            "storage": standalone_storage
+        }
+    }

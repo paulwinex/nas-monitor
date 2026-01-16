@@ -1,6 +1,7 @@
 import logging
 
-from collectors import BaseCollector
+from nas_monitor.collectors import BaseCollector
+from nas_monitor.config import config
 from nas_monitor.metrics import add_metrics_batch, get_enabled_devices_by_type
 
 # map collectors by device type
@@ -28,13 +29,34 @@ async def job_collector_task(dev_type: str):
 
 
 def setup_polling(scheduler):
-    # network
-    scheduler.add_job(job_collector_task, 'interval', seconds=3, args=['network'])
+    """Setup polling jobs with intervals from config"""
+    # Network
+    scheduler.add_job(
+        job_collector_task, 'interval', 
+        seconds=config.COLLECTOR_INTERVAL_NETWORK, 
+        args=['network']
+    )
     # CPU
-    scheduler.add_job(job_collector_task, 'interval', seconds=5, args=['cpu'])
+    scheduler.add_job(
+        job_collector_task, 'interval', 
+        seconds=config.COLLECTOR_INTERVAL_CPU, 
+        args=['cpu']
+    )
     # RAM
-    scheduler.add_job(job_collector_task, 'interval', seconds=5, args=['ram'])
-    # hard drives and ssd
-    scheduler.add_job(job_collector_task, 'interval', minutes=1, args=['storage'])
+    scheduler.add_job(
+        job_collector_task, 'interval', 
+        seconds=config.COLLECTOR_INTERVAL_RAM, 
+        args=['ram']
+    )
+    # Hard drives and SSD
+    scheduler.add_job(
+        job_collector_task, 'interval', 
+        seconds=config.COLLECTOR_INTERVAL_STORAGE, 
+        args=['storage']
+    )
     # ZFS Pool
-    scheduler.add_job(job_collector_task, 'interval', minutes=10, args=['zfs_pool'])
+    scheduler.add_job(
+        job_collector_task, 'interval', 
+        seconds=config.COLLECTOR_INTERVAL_ZFS_POOL, 
+        args=['zfs_pool']
+    )

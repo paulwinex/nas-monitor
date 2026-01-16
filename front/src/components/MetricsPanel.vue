@@ -69,6 +69,7 @@ const gridStyles = computed(() => ({
   grid-auto-rows: 48px;
 }
 
+
 @media (min-width: 768px) {
   .base-metrics-grid {
     grid-template-columns: repeat(var(--desktop-cols), 1fr);
@@ -80,7 +81,4 @@ const gridStyles = computed(() => ({
   justify-content: center;
   align-items: center;
 }
-
-
-
 </style>
