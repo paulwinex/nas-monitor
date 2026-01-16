@@ -208,6 +208,9 @@ export const useDeviceStore = defineStore('devices', () => {
         if (reconnectionTimer) return;
 
         console.log('Starting reconnection loop...');
+        // Stop all polling to prevent flooding console with errors while offline
+        stopAllPolling();
+
         reconnectionTimer = setInterval(async () => {
             if (isConnected.value) {
                 clearInterval(reconnectionTimer);
@@ -217,18 +220,19 @@ export const useDeviceStore = defineStore('devices', () => {
 
             try {
                 const data = await api.getInventory();
-                if (data.status === 'success') {
-                    console.log('Server is back! Resuming...');
-                    inventory.value = data.data;
-                    isConnected.value = true;
-                    error.value = null;
+                // Check for successful response and required data structure
+                if (data && data.status === 'success') {
+                    console.log('Server is back! Performing full re-initialization...');
+
+                    // Clear the timer first
                     clearInterval(reconnectionTimer);
                     reconnectionTimer = null;
 
-                    // Trigger a fresh poll of everything that was being polled
-                    if (pollingStates.value.size > 0) {
-                        pollMetrics();
-                    }
+                    // Reset error state
+                    error.value = null;
+
+                    // Perform full initialization (loads inventory, config, and starts polling)
+                    await initialize();
                 }
             } catch (e) {
                 // Still down
