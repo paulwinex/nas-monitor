@@ -16,8 +16,8 @@
           <div class="row justify-between items-center no-wrap">
             <div class="text-blue-4 text-mono" style="font-size: 11px;">NET</div>
             <div class="column items-end">
-              <div class="text-orange-3 text-weight-bold text-mono" style="font-size: 11px; line-height: 1;">{{ formatSpeed(upSpeed) }}</div>
-              <div class="text-green-3 text-weight-bold text-mono q-mt-xs" style="font-size: 11px; line-height: 1;">{{ formatSpeed(downSpeed) }}</div>
+              <div class="text-orange-3 text-weight-bold text-mono" style="font-size: 11px; line-height: 1;">{{ formatSpeed(upSpeed) }} <q-icon name="arrow_drop_up" size="xs"/></div>
+              <div class="text-green-3 text-weight-bold text-mono q-mt-xs" style="font-size: 11px; line-height: 1;">{{ formatSpeed(downSpeed) }} <q-icon name="arrow_drop_down" size="xs"/></div>
             </div>
           </div>
         </div>
