@@ -1,13 +1,16 @@
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from pprint import pprint
 from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from nas_monitor.config import config
 from nas_monitor.api_router import router as api_router
@@ -49,6 +52,7 @@ app.add_middleware(
 # Include API router
 app.include_router(api_router)
 
+front_dir = Path(__file__, '../../frontend').resolve()
 
 @app.get("/api/status")
 async def get_metriks(payload: RequestMetricsPayload):
@@ -58,12 +62,23 @@ async def get_metriks(payload: RequestMetricsPayload):
         return await mt.read_hourly_range()
     elif payload.range_name == 'history':
         return await mt.read_history_range()
+print('FRONT DIR', front_dir)
+if front_dir.exists():
+    print('USE BUILT FRONTEND')
+    app.mount("/assets", StaticFiles(directory=front_dir.joinpath('assets').as_posix()), name="assets")
 
+    @app.get("/")
+    async def get_index():
+        return FileResponse(front_dir.joinpath("index.html").as_posix())
 
-@app.get("/", response_class=HTMLResponse)
-async def get_index(request: Request):
-    html_content = """TODO"""
-    return HTMLResponse(content=html_content)
+else:
+    print('NO BUILT FRONTEND, USE DUMMY')
+    @app.get("/", response_class=HTMLResponse)
+    async def get_index(request: Request):
+        # html_content = """
+        # <a href="/docs">Go to swagger</a>"""
+        return RedirectResponse(request.url_for("docs"))
+        # return HTMLResponse(content=html_content)
 
 
 @app.get("/api/get-devices")
