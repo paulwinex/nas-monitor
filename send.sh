@@ -30,6 +30,8 @@ rsync -av -P \
   --exclude='*.pyc' \
   . "$REMOTE_HOST:$REMOTE_PATH/"
 
+rsync -av -P ./front/dist/spa/ "$REMOTE_HOST:$REMOTE_PATH/frontend"
+
 echo "Files synced successfully!"
 
 echo "Installing dependencies on remote host..."
