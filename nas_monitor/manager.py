@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from nas_monitor.collectors import BaseCollector
 from nas_monitor.config import config
@@ -11,6 +12,7 @@ from nas_monitor.metrics import (
     HourlyMetric,
     HistoryMetric
 )
+from nas_monitor.alerting import alert_engine
 
 # map collectors by device type
 COLLECTORS = {cls.dev_type: cls() for cls in BaseCollector.__subclasses__()}
@@ -30,6 +32,9 @@ async def job_collector_task(dev_type: str):
 
         if filtered_data:
             await add_metrics_batch(filtered_data)
+            
+            # Run alerting checks asynchronously
+            asyncio.create_task(alert_engine.process(filtered_data, devices))
         else:
             logging.warning('Nothing to write for type: %s', dev_type)
     else:

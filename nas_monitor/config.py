@@ -39,6 +39,19 @@ class AppConfig(BaseSettings):
     API_PORT: int = 8000
     CORS_ORIGINS: list[str] = ["*"]
     
+    # Alerting settings
+    ALERT_THROTTLE_MINUTES: int = 10
+    ALERT_CPU_TEMP_THRESHOLD: float = 60.0
+    ALERT_CPU_LOAD_THRESHOLD: float = 90.0
+    ALERT_CPU_LOAD_DURATION_MINUTES: int = 5
+    ALERT_STORAGE_TEMP_THRESHOLD: float = 45.0
+    ALERT_STORAGE_CAPACITY_THRESHOLD: float = 60
+
+    ALERT_RAM_USAGE_THRESHOLD: float = 95.0
+    ALERT_RAM_TEMP_THRESHOLD: float = 70.0  # approximate warning temp for RAM
+    
+    ALERT_ZFS_USAGE_THRESHOLD: float = 90.0
+
     # Disable tasks (for testing)
     DISABLE_TASKS: bool = False
 

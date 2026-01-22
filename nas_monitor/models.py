@@ -5,17 +5,17 @@ from nas_monitor.config import config
 
 
 class Device(models.Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100, unique=True)
-    type = fields.CharField(max_length=50, index=True)  # cpu, ram, hdd, zfs_pool, net
+    type = fields.CharField(max_length=50, db_index=True)  # cpu, ram, hdd, zfs_pool, net
     enabled = fields.BooleanField(default=True)
     details = fields.JSONField(null=True)
 
 
 class MetricBase(models.Model):
-    timestamp = fields.DatetimeField(index=True)
+    timestamp = fields.DatetimeField(db_index=True)
     device = fields.ForeignKeyField('models.Device')
-    label = fields.CharField(max_length=50, index=True)
+    label = fields.CharField(max_length=50, db_index=True)
     value = fields.FloatField()
 
     class Meta: abstract = True
@@ -31,7 +31,7 @@ class HistoryMetric(MetricBase): pass
 
 
 class MigrationState(models.Model):
-    stage = fields.CharField(max_length=20, pk=True)
+    stage = fields.CharField(max_length=20, primary_key=True)
     last_processed_id = fields.BigIntField(default=0)
 
 
