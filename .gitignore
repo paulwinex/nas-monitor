@@ -35,3 +35,5 @@ front/yarn-error.log*
 .env
 
 .venv/
+.vscode/
+
