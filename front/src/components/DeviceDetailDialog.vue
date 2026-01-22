@@ -48,18 +48,20 @@
           <div class="col-12 col-md-3">
             <q-card flat bordered class="bg-disk border-dark-thin full-height">
               <q-card-section>
-                <div class="text-subtitle2 text-blue-4 q-mb-md">DETAILS</div>
-                <div class="column q-gutter-y-sm">
+                <div class="text-subtitle2 text-blue-4 q-mb-md">DEVICE DETAILS</div>
+                <dl class="text-mono">
                   <div class="row justify-between no-wrap">
-                    <div class="text-grey-6 text-caption text-uppercase">NAME / SN</div>
-                    <div class="text-blue-2 text-weight-bold text-mono" style="font-size: 11px;">{{ device?.name }}</div>
+                    <dt class="text-grey-6 text-caption text-uppercase">NAME / SN</dt>
+                    <dd class="text-blue-2 text-weight-bold text-mono" style="font-size: 11px;">{{ device?.name }}</dd>
                   </div>
                   <q-separator color="grey-9" class="q-my-xs" />
-                  <div v-for="(val, key) in device?.details" :key="key" class="row justify-between no-wrap">
-                    <div class="text-grey-6 text-caption text-uppercase">{{ key }}</div>
-                    <div class="text-white text-weight-bold text-mono" style="font-size: 11px;">{{ val }}</div>
-                  </div>
-                </div>
+                  <template v-for="(val, key) in device?.details" :key="key">
+                    <div class="row justify-between no-wrap">
+                      <dt class="text-grey-6 text-caption text-uppercase">{{ key }}</dt>
+                      <dd class="text-white text-weight-bold text-mono" style="font-size: 11px;">{{ val }}</dd>
+                    </div>
+                  </template>
+                </dl>
               </q-card-section>
             </q-card>
           </div>
@@ -249,4 +251,5 @@ const chartOptions = computed(() => ({
 .header-height { height: 36px; }
 .tracking-1 { letter-spacing: 1px; }
 .rounded-borders { border-radius: 4px; }
+dl, dd { margin: 0; }
 </style>

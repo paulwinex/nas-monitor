@@ -48,7 +48,7 @@ const chartOptions = computed(() => ({
     animations: { enabled: false }, 
     background: 'transparent'
   },
-  stroke: { curve: 'straight', width: 1 },
+  stroke: { curve: 'smooth', width: 1 },
   fill: { type: 'solid', opacity: [0.2, 0.05] },
   colors: [props.color || '#2E93FA', '#ff9800'],
   tooltip: { enabled: false },

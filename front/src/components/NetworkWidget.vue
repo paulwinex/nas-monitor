@@ -51,7 +51,7 @@ const series = computed(() => [
 
 const chartOptions = {
   chart: { sparkline: { enabled: true }, animations: { enabled: false }, background: 'transparent' },
-  stroke: { curve: 'straight', width: 1 },
+  stroke: { curve: 'smooth', width: 1 },
   colors: ['#00E396', '#FEB019'],
   fill: { type: 'solid', opacity: 0.15 },
   tooltip: { enabled: false }

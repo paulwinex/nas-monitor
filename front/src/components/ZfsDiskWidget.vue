@@ -114,7 +114,7 @@ const chartOptions = computed(() => ({
     },
     background: 'transparent'
   },
-  stroke: { curve: 'straight', width: 1 },
+  stroke: { curve: 'smooth', width: 1 },
   fill: { type: 'solid', opacity: 0.2 },
   colors: [props.accentColor],
   tooltip: { enabled: false },
