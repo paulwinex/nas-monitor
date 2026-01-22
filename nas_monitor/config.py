@@ -52,6 +52,11 @@ class AppConfig(BaseSettings):
     
     ALERT_ZFS_USAGE_THRESHOLD: float = 90.0
 
+    # Sender settings
+    ALERT_PROVIDERS: list[str] = ["telegram"]
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
     # Disable tasks (for testing)
     DISABLE_TASKS: bool = False
 

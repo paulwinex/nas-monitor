@@ -21,6 +21,8 @@ from nas_monitor.device_inventory import perform_inventory
 from nas_monitor.manager import setup_polling
 from nas_monitor.metrics import fetch_metrics_data
 from nas_monitor.shemas import RequestMetricsPayload
+# Import sender manager to initialize it during startup (it does init in constructor)
+from nas_monitor.senders.manager import sender_manager
 
 
 @asynccontextmanager

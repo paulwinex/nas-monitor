@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from nas_monitor.models import Device, RawMetric
 from nas_monitor.shemas import Metrics
+from nas_monitor.senders.manager import sender_manager
 
 # Throttle cache: {(device_name, check_class_name): last_alert_timestamp}
 _THROTTLE_CACHE = {}
@@ -58,7 +59,8 @@ class BaseChecker(ABC):
             message = template.render(**context)
             logging.info(f"ALERT [{self.__class__.__name__}]: {message}")
             
-            # Placeholder for actual notification sending (e.g. Telegram)
+            # Send message to all providers
+            await sender_manager.send_all(message)
 
             return True
             
